@@ -94,30 +94,36 @@ The development environment (PHP, Composer, Node, MySQL, Git), the Laravel React
 
 ## Phase 1 — Authentication (Email & Google)
 
-Planned:
+**Status: PARTIALLY DONE. The remainder is deferred to the end of the project** (updated 2026-10-17)
 
-- Fresh project from the Laravel React Starter Kit (Fortify authentication, not WorkOS), development database, first commit
-- Toolchain overview: Vite+ and the TypeScript type-check command (`npm run types:check`). Vite strips types but does not check them, so `tsc --noEmit` is the real check
-- Confirm the starter kit migrations ran on the development database (passkeys table, two-factor columns)
-- Sessions versus tokens, CSRF, password hashing
-- Hand-built minimal login on a throwaway branch (learning exercise), then tracing the starter kit's Fortify flow from form to session
-- Registration, login, logout, remember me
-- Email verification
-- Password reset
-- Login rate limiting (review the starter kit's limiter, which is keyed on email plus IP)
-- Two-factor authentication (starter kit): trace the flow
-- Passkeys (starter kit): trace the flow
-- Protected and guest-only routes
-- Typed authentication state on the frontend (first TypeScript concepts, introduced in the real login page and `types/auth.ts`: props, form state, shared props, unions such as `string | null`)
-- Google sign-in: OAuth explained from first principles, Google OAuth credentials setup (verified card-free first), Laravel Socialite integration
-- Linking Google to an existing email account
-- Handling accounts created both ways
-- Testing that Google sign-in works locally
-- Frontend handling of expired sessions (redirect to login on 401 / 419)
+### Done
+
+- Fresh project from the Laravel React Starter Kit (Fortify authentication, not WorkOS), Installer 5.31.1
+- Development database `chat_app` created, migrations ran
+- App runs with `composer run dev`
+- Baseline type check: `npm run types:check` reports 0 errors
+- Git initialised, `.env` untracked, continuity documents committed
+- Registration, email verification (log mailer), login and changing the name on the profile page work
+- Two-factor authentication and passkeys were selected at install (login page shows "Sign in with a passkey")
+
+### Deferred (to be done once the chat itself works)
+
+- Sessions versus tokens (theory covered; cookie and sessions-table inspection not done), CSRF, password hashing
+- Hand-built minimal login on a throwaway branch, then tracing the Fortify flow from form to session
+- Typed authentication state on the frontend (`types/auth.ts`, props, shared props, `string | null`)
+- Logout and remember me (not yet checked)
+- Password reset (not yet checked)
+- Protected and guest-only routes (not yet checked)
+- Login rate limiting (review the starter kit's limiter)
+- Two-factor authentication: trace the flow
+- Passkeys: trace the flow
+- Google sign-in: OAuth from first principles, credentials (verified card-free first), Laravel Socialite, linking to an existing email account, accounts created both ways, local test
+- Frontend handling of expired sessions (401 / 419). Phase 3's central API layer needs a basic version of this
 - Disabled submit buttons while a request is in flight
 - Security headers
-- Structured logging setup
-- Logging of authentication events and failures, never tokens or passwords
+- Structured logging, and logging of authentication events (never tokens or passwords)
+
+Note: the database may be wiped and rebuilt if deferred work (for example Google sign-in) changes the `users` schema.
 
 ## Phase 2 — Data Model
 

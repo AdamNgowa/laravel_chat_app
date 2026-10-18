@@ -1,54 +1,61 @@
 # CURRENT_STATUS
 
-# Phase 1 — Authentication (Email & Google)
+Last updated: 2026-10-17
 
-**Status: NOT STARTED** (last updated 2026-10-16)
+# Phase 1 — Authentication
 
-Target: working email and Google sign-in on a fresh Laravel + React + TypeScript project, understood end to end. TypeScript is learned inside the real files we read and write, starting with the login page. Tests come in Phase 13.
+**Status: CLOSED for now** (partially done, remainder deferred; see PROJECT_CHARTER.md)
 
-> Restarted on 2026-10-16: the first scaffold was discarded, the old Phase 1 (setup and TypeScript exercises) was removed from the charter, and phases were renumbered.
+# Phase 2 — Data Model
 
-- 1.1 Fresh Project Setup
-    - 1.1.1 Create the project from the Laravel React Starter Kit - NOT STARTED (Fortify, not WorkOS)
-    - 1.1.2 Development database - NOT STARTED (`chat_app`, `utf8mb4_unicode_ci`, set in `.env`, run `php artisan migrate`, confirm `migrate:status` shows the passkeys and two-factor migrations as Ran)
-    - 1.1.3 Run the app - NOT STARTED (`composer run dev`)
-    - 1.1.4 Baseline type-check - NOT STARTED (run `npm run types:check` before changing anything and record the result; the previous scaffold reported a Wayfinder `"query"` method error in a generated file)
-    - 1.1.5 Version control - NOT STARTED (init, confirm `.env` is not tracked, add the three project documents, first commit)
+**Status: NOT STARTED**
+
+Target: the chat database schema designed, migrated, modelled and protected, understood end to end. Tests come in Phase 13, so each step is verified with `php artisan migrate:status`, Tinker and the MySQL tables. Because the app is in development, the database can be wiped and rebuilt (`php artisan migrate:fresh`) whenever the schema changes.
+
+- 2.1 Design Decisions (theory only, no code)
+    - 2.1.1 What a chat is - DONE (conversation, participants and messages; explicit `type`, never inferred from participant count)
+    - 2.1.2 Direct-chat uniqueness - DONE (two-column pair key, lower id first, nullable for groups, unique index; application check plus database constraint; self-chat allowed as pair (3, 3) with ONE participant row)
+    - 2.1.3 Leaving a group - DONE (keep the participant row; `joined_at` and `left_at` timestamps define a visibility window; rejoin resets `joined_at` and clears `left_at`; history of stays goes in the Phase 6 audit log)
+    - 2.1.4 "Delete for me" and deletion strategy - DONE (soft delete on messages for "delete for everyone"; per-user hidden-messages table for "delete for me"; `cleared_at` and a hide flag on the participant row for clear chat and delete chat; no soft deletes on conversations; whether the body is erased is decided in Phase 7, `body` stays nullable; deleted bodies are never sent to the client)
+    - 2.1.5 Which tables now, which later - DONE (approach B: three core tables now; separate tables arrive in the phase that needs them via new migrations; the main risk is a missed column on `messages`, reduced by planning the core columns carefully)
       **Status: NOT STARTED**
 
-- 1.2 How Login Works
-    - 1.2.1 Sessions versus tokens, CSRF, password hashing - NOT STARTED
-    - 1.2.2 Hand-built minimal login on a throwaway branch - NOT STARTED
-    - 1.2.3 Trace the starter kit flow from form to session - NOT STARTED (`login.tsx`, Wayfinder form helpers, Fortify; first TypeScript concepts introduced here)
-    - 1.2.4 Typed authentication state - NOT STARTED (`types/auth.ts`, shared props, `string | null`)
+- 2.2 Core Tables
+    - 2.2.1 `conversations` migration - NOT STARTED
+    - 2.2.2 Participants migration - NOT STARTED (per-user state lives here: role, last read, archive, pin, mute)
+    - 2.2.3 `messages` migration - NOT STARTED
+    - 2.2.4 Indexes - NOT STARTED (messages by conversation, conversations by latest activity, participants by user)
+    - 2.2.5 Run migrations and inspect the tables - NOT STARTED (`migrate:status`, `db:table`)
       **Status: NOT STARTED**
 
-- 1.3 Account Flows
-    - 1.3.1 Registration, logout, remember me - NOT STARTED
-    - 1.3.2 Email verification - NOT STARTED
-    - 1.3.3 Password reset - NOT STARTED
-    - 1.3.4 Protected and guest-only routes - NOT STARTED
+- 2.3 Supporting Tables
+    - 2.3.1 Attachments - NOT STARTED
+    - 2.3.2 Read state - NOT STARTED (decide whether it is columns on the participants table or a separate table)
+    - 2.3.3 Reactions - NOT STARTED
+    - 2.3.4 Blocks - NOT STARTED
+    - 2.3.5 Stars - NOT STARTED
+    - 2.3.6 Settings - NOT STARTED
       **Status: NOT STARTED**
 
-- 1.4 Stronger Sign-in
-    - 1.4.1 Login rate limiting - NOT STARTED
-    - 1.4.2 Two-factor authentication (trace the flow) - NOT STARTED
-    - 1.4.3 Passkeys (trace the flow) - NOT STARTED
+- 2.4 Models and Relationships
+    - 2.4.1 `Conversation`, participant and `Message` models - NOT STARTED
+    - 2.4.2 Relationships on `User` - NOT STARTED
+    - 2.4.3 Verify relationships in Tinker - NOT STARTED
       **Status: NOT STARTED**
 
-- 1.5 Google Sign-in
-    - 1.5.1 OAuth explained from first principles - NOT STARTED
-    - 1.5.2 Google OAuth credentials (verify card-free first) - NOT STARTED
-    - 1.5.3 Laravel Socialite integration - NOT STARTED
-    - 1.5.4 Linking Google to an existing email account, handling accounts created both ways - NOT STARTED
-    - 1.5.5 Test Google sign-in locally - NOT STARTED
+- 2.5 Time and Deletion Rules
+    - 2.5.1 UTC timestamp storage - NOT STARTED
+    - 2.5.2 Soft deletes - NOT STARTED
       **Status: NOT STARTED**
 
-- 1.6 Hardening
-    - 1.6.1 Expired sessions: redirect to login on 401 / 419 - NOT STARTED
-    - 1.6.2 Disabled submit buttons while a request is in flight - NOT STARTED
-    - 1.6.3 Security headers - NOT STARTED
-    - 1.6.4 Structured logging, and logging of authentication events (never tokens or passwords) - NOT STARTED
+- 2.6 Factories and Seeders
+    - 2.6.1 Factories for the new models - NOT STARTED
+    - 2.6.2 Seed realistic conversations and messages - NOT STARTED (extend the existing `DatabaseSeeder`)
       **Status: NOT STARTED**
 
-**NEXT STEP: 1.1.1 Create the project from the Laravel React Starter Kit, then 1.1.4 baseline type-check**
+- 2.7 Authorization
+    - 2.7.1 Policies for participant-only access - NOT STARTED
+    - 2.7.2 Verify boundaries in Tinker - NOT STARTED
+      **Status: NOT STARTED**
+
+**NEXT STEP: 2.1.1 What a chat is (theory and design, no code)**
