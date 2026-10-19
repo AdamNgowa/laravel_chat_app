@@ -18,24 +18,25 @@ Target: the chat database schema designed, migrated, modelled and protected, und
     - 2.1.3 Leaving a group - DONE (keep the participant row; `joined_at` and `left_at` timestamps define a visibility window; rejoin resets `joined_at` and clears `left_at`; history of stays goes in the Phase 6 audit log)
     - 2.1.4 "Delete for me" and deletion strategy - DONE (soft delete on messages for "delete for everyone"; per-user hidden-messages table for "delete for me"; `cleared_at` and a hide flag on the participant row for clear chat and delete chat; no soft deletes on conversations; whether the body is erased is decided in Phase 7, `body` stays nullable; deleted bodies are never sent to the client)
     - 2.1.5 Which tables now, which later - DONE (approach B: three core tables now; separate tables arrive in the phase that needs them via new migrations; the main risk is a missed column on `messages`, reduced by planning the core columns carefully)
-      **Status: NOT STARTED**
+      **Status: DONE**
 
 - 2.2 Core Tables
-    - 2.2.1 `conversations` migration - NOT STARTED
+    - 2.2.1 `conversations` migration - DONE (migration run, structure verified with `db:table`, unique pair constraint proven in Tinker)
     - 2.2.2 Participants migration - NOT STARTED (per-user state lives here: role, last read, archive, pin, mute)
     - 2.2.3 `messages` migration - NOT STARTED
     - 2.2.4 Indexes - NOT STARTED (messages by conversation, conversations by latest activity, participants by user)
     - 2.2.5 Run migrations and inspect the tables - NOT STARTED (`migrate:status`, `db:table`)
       **Status: NOT STARTED**
 
-- 2.3 Supporting Tables
-    - 2.3.1 Attachments - NOT STARTED
-    - 2.3.2 Read state - NOT STARTED (decide whether it is columns on the participants table or a separate table)
-    - 2.3.3 Reactions - NOT STARTED
-    - 2.3.4 Blocks - NOT STARTED
-    - 2.3.5 Stars - NOT STARTED
-    - 2.3.6 Settings - NOT STARTED
-      **Status: NOT STARTED**
+- 2.3 Tables Created Later (not built in Phase 2; each arrives as a new migration in the phase that needs it)
+    - Attachments - Phase 8
+    - Reactions - Phase 7
+    - Stars - Phase 7
+    - "Hidden for me" messages - Phase 7
+    - Blocks - Phase 9
+    - Settings - Phase 11
+    - Read state: no table, a column on the participant row (Phase 5)
+      **Status: DEFERRED BY DESIGN**
 
 - 2.4 Models and Relationships
     - 2.4.1 `Conversation`, participant and `Message` models - NOT STARTED
@@ -58,4 +59,4 @@ Target: the chat database schema designed, migrated, modelled and protected, und
     - 2.7.2 Verify boundaries in Tinker - NOT STARTED
       **Status: NOT STARTED**
 
-**NEXT STEP: 2.1.1 What a chat is (theory and design, no code)**
+**NEXT STEP: 2.2.1 `conversations` migration (write, run, inspect)**
