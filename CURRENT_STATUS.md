@@ -26,8 +26,8 @@ Open items:
 - 2.3 Tables Created Later: DEFERRED BY DESIGN (unchanged)
 
 - 2.4 Models and Relationships
-    - 2.4.1 PHP enums `ConversationType` and `MessageType` - NOT STARTED
-    - 2.4.2 `Conversation`, `Participant` and `Message` models, with casts - NOT STARTED
+    - 2.4.1 PHP enums `ConversationType` and `MessageType` - DONE (in `app/Enums/`; backed enums, cast on the models)
+    - 2.4.2 `Conversation`, `Participant` and `Message` models, with casts - DONE (verified in Tinker: enum and date casts, relationships, mass-assignment guard on `sender_id` and `conversation_id`, soft delete, bad enum value rejected, cascade)
     - 2.4.3 Relationships on `User` - NOT STARTED
     - 2.4.4 Visibility-window query rule (depends on 2.5.1, so do 2.5.1 first) - NOT STARTED
     - 2.4.5 Verify relationships in Tinker - NOT STARTED
