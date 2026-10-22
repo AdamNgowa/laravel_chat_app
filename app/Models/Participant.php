@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -52,5 +53,35 @@ class Participant extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    
+
+        /**
+     * The messages this member is allowed to see.
+     *
+     * Visible only after the later of joined_at and cleared_at and, once the
+     * member has left, only before left_at. Ties are hidden on purpose.
+     * Boundaries are formatted by hand so the query keeps the microseconds.
+     *
+     * @return HasMany<Message, $this>
+     */
+    public function visibleMessages(): HasMany
+    {
+        // One format for every boundary: Y-m-d H:i:s.u (i = minutes, m = month).
+        $format = 'Y-m-d H:i:s.u';
+
+        $start = $this->cleared_at !== null && $this->cleared_at->greaterThan($this->joined_at)
+            ? $this->cleared_at
+            : $this->joined_at;
+
+        $messages = $this->hasMany(Message::class, 'conversation_id', 'conversation_id')
+            ->where('created_at', '>', $start->format($format));
+
+        if ($this->left_at !== null) {
+            $messages->where('created_at', '<', $this->left_at->format($format));
+        }
+
+        return $messages;
     }
 }

@@ -37,7 +37,8 @@ Rules adopted (2.5.1):
     - 2.4.1 PHP enums `ConversationType` and `MessageType` - DONE (in `app/Enums/`; backed enums, cast on the models)
     - 2.4.2 `Conversation`, `Participant` and `Message` models, with casts - DONE (verified in Tinker: enum and date casts, relationships, mass-assignment guard on `sender_id` and `conversation_id`, soft delete, bad enum value rejected, cascade)
     - 2.4.3 Relationships on `User` - DONE (`participants`, `sentMessages`; verified in Tinker, including cascade)
-    - 2.4.4 Visibility-window query rule - DEFERRED until after 2.5.1 (depends on the time-zone decision)
+    - 2.4.4 Visibility-window query rule - DONE (`Participant::visibleMessages()`; window is the later of `joined_at` and `cleared_at` up to `left_at`; ties hidden; boundaries formatted with microseconds; verified to the microsecond in Tinker; bug fixed: `m` month used instead of `i` minutes)
+      **Status: DONE** (2.4 Models and Relationships)
     - 2.4.5 Verify relationships in Tinker - DONE (verified across 2.4.2 and 2.4.3)
       **Status: DONE except 2.4.4**
 
