@@ -23,13 +23,13 @@ return new class extends Migration
             // Visibility window: messages are visible from joined_at until left_at.
             // dateTime, not timestamp: a MySQL/MariaDB timestamp column can silently get a
             // default and an "on update" rule that rewrites it whenever the row changes.
-            $table->dateTime('joined_at');
-            $table->dateTime('left_at')->nullable();
+            $table->dateTime('joined_at',6);
+            $table->dateTime('left_at',6)->nullable();
 
             // "Clear chat" (Phase 9) hides everything before this moment, for this user only.
-            $table->dateTime('cleared_at')->nullable();
+            $table->dateTime('cleared_at',6)->nullable();
 
-            $table->timestamps();
+            $table->timestamps(6);
 
             // One row per person per conversation. A self-chat has exactly one row.
             $table->unique(['conversation_id', 'user_id']);

@@ -18,6 +18,7 @@ Rules adopted (2.5.1):
 - Our own tables never rely on database-generated times: no `useCurrent()`, no `DB::raw('now()')`, no `DEFAULT CURRENT_TIMESTAMP`. Laravel's `failed_jobs` table has one, which is harmless because the session is UTC.
 - Times are converted to the viewer's zone only at the edge, in the browser (Phase 3).
 - Pinning on day one matters: old TIMESTAMP rows written under a different session zone would read hours off after the pin.
+- Rows whose times are compared (messages, participants) are written through their models, which store microseconds. Raw `DB::table()` inserts are not used for them.
 
 - 2.1 Design Decisions: DONE (see earlier entries 2.1.1 to 2.1.5, unchanged)
   **Status: DONE**

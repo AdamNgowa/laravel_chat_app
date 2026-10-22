@@ -21,9 +21,13 @@ use Illuminate\Support\Carbon;
 class Participant extends Model
 {
     /**
+     * Store dates in microseconds. Messages are ordered and compared with a 
+     * member's visibility window, and whole seconds are not precise enough
+     */
+    protected $dateFormat = 'Y-m-d H:i:s.u';
+
+    /**
      * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
      */
     protected function casts(): array
     {

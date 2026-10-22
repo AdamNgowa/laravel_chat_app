@@ -35,9 +35,9 @@ return new class extends Migration
             // NULL for server-made system messages (NULLs can repeat in a unique index).
             $table->char('client_uuid', 36)->nullable();
 
-            $table->timestamp('edited_at')->nullable();
-            $table->softDeletes();
-            $table->timestamps();
+            $table->timestamp('edited_at',6)->nullable();
+            $table->softDeletes('deleted_at', 6);
+            $table->timestamps(6);
 
             // Retry safety: the same sender cannot save the same client id twice.
             $table->unique(['sender_id', 'client_uuid']);
