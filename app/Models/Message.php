@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Database\Factories\MessageFactory;
+
 use App\Enums\MessageType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +28,8 @@ use Illuminate\Support\Carbon;
 #[Fillable(['type', 'body', 'reply_to_id', 'client_uuid'])]
 class Message extends Model
 {
-    use SoftDeletes;
+        /** @use HasFactory<MessageFactory> */
+    use HasFactory, SoftDeletes;
 
     /**
      * Store dates in microseconds. Messages are ordered and compared with a 

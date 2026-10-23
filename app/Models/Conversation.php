@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Models;
+use Database\Factories\ConversationFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 use App\Enums\ConversationType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -19,6 +21,10 @@ use Illuminate\Support\Carbon;
 #[Fillable(['type', 'direct_user_low_id', 'direct_user_high_id'])]
 class Conversation extends Model
 {
+        /** @use HasFactory<ConversationFactory> */
+    use HasFactory;
+
+    
     /**
      * Get the attributes that should be cast.
      *

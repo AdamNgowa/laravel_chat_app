@@ -48,9 +48,9 @@ Rules adopted (2.5.1):
       **Status: DONE**
 
 - 2.6 Factories and Seeders
+    - 2.6.0 Design - DONE (factories build one valid row; the seeder builds a reachable world; states for direct, group, left, cleared, system, reply, deleted; messages created in chronological order; dev-only guard before Phase 16)
     - 2.6.1 Factories for the new models - NOT STARTED
-    - 2.6.2 Seed realistic conversations and messages - NOT STARTED (extend the existing `DatabaseSeeder`)
-      **Status: NOT STARTED**
+    - 2.6.2 Seed realistic conversations and messages - DONE (verified: 8 conversations, 19 participants, 2,330 messages; all three invariants return 0; visibleMessages() works on seeded data; guard refuses to run in production)
 
 - 2.7 Authorization
     - 2.7.1 Policies for participant-only access - NOT STARTED

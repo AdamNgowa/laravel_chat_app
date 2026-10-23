@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +23,9 @@ use Illuminate\Support\Carbon;
 #[Fillable(['user_id', 'joined_at', 'left_at', 'cleared_at'])]
 class Participant extends Model
 {
+    /** @use HasFactory<ParticipantFactory> */
+    use HasFactory;
+
     /**
      * Store dates in microseconds. Messages are ordered and compared with a 
      * member's visibility window, and whole seconds are not precise enough
