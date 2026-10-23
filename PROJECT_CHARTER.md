@@ -80,7 +80,7 @@ The same mistakes now appear as red underlines while typing:
 - **Voice and video calls and call logs are out of scope.**
 - **Login:** email and password through the Laravel React Starter Kit's built-in authentication (powered by Laravel Fortify), and Google sign-in through Laravel Socialite, both built in Phase 1. Email and password remains the primary method for local development.
 - **Security and usability hardening is built in as we go.** Rate limiting, security headers, upload hardening, session-expiry handling, disabled in-flight buttons, logging and similar items are introduced in the phase where they are first needed, not postponed to the end. Only items with no usability or security value until the app is deployed (backups, secret rotation, error tracking) wait for the Deployment phase.
-- **Stack:** Laravel (React Starter Kit with Fortify and Wayfinder), React, TypeScript, Inertia.js, Tailwind CSS, shadcn/ui, Vite+, Pest, MySQL, Laravel Reverb and Laravel Echo. Any additions are introduced in the phase that needs them and explained first.
+- **Stack:** Laravel (React Starter Kit with Fortify and Wayfinder), React, TypeScript, Inertia.js, Tailwind CSS, shadcn/ui, Vite+, Pest, a MySQL-compatible database (MariaDB 10.4.32 locally, through Laravel's `mysql` driver), Laravel Reverb and Laravel Echo. Any additions are introduced in the phase that needs them and explained first. The database engine is re-verified before Phase 15 (Docker) and Phase 16 (deployment).
 
 ---
 
@@ -90,7 +90,7 @@ Every phase follows the Feature Workflow below. Automated tests are written toge
 
 ## Foundations (not a numbered phase)
 
-The development environment (PHP, Composer, Node, MySQL, Git), the Laravel React Starter Kit scaffold, the repository and the first project tour are treated as groundwork. The project is created fresh at the start of Phase 1 (step 1.1). TypeScript is not taught separately: it is introduced in Phase 1 through the real files we read and write, starting with the login page.
+The development environment (PHP, Composer, Node, a MySQL-compatible database, Git), the Laravel React Starter Kit scaffold, the repository and the first project tour are treated as groundwork. The project is created fresh at the start of Phase 1 (step 1.1). TypeScript is not taught separately: it is introduced in Phase 1 through the real files we read and write, starting with the login page.
 
 ## Phase 1 — Authentication (Email & Google)
 
@@ -127,14 +127,36 @@ Note: the database may be wiped and rebuilt if deferred work (for example Google
 
 ## Phase 2 — Data Model
 
-Planned:
+**Status: DONE** (updated 2026-10-23)
 
-- Schema: users, conversations, participants, messages, attachments, read state, reactions, blocks, stars, settings
-- Migrations, indexes, relationships
-- Factories and seeders
-- Soft deletes
-- UTC timestamp storage
-- Policies for participant-only access
+### Done
+
+- Design: a chat is a conversation, its participants and its messages. `type` is stored explicitly, never inferred from the participant count. Direct-chat uniqueness uses two nullable ordered-pair columns plus a unique index (the database is the race-condition backstop; a chat with yourself is allowed with one participant row). Leaving a group keeps the participant row, with a joined/left window deciding what is visible. Soft delete on messages only.
+- Migrations for `conversations`, `participants` and `messages`, with a retry-safe client id on messages and indexes verified with `EXPLAIN` (messages are ordered by `id`)
+- Models, backed enums, casts and relationships. Server-set fields (`sender_id`, `conversation_id`) are not mass-assignable.
+- Visibility-window rule `Participant::visibleMessages()`, with microsecond precision and ties hidden
+- Time rules: PHP in UTC, database connection pinned to `+00:00`, no database-generated times in our own tables
+- Factories and a development seeder (8 conversations, 19 participants, 2,330 messages), with invariants verified in SQL and a guard that refuses to run in production
+- `ConversationPolicy` with `view` and `send`: non-members get 404, a leaver can read but not post (403)
+- Database engine decision: stay on MariaDB 10.4.32 locally, through Laravel's `mysql` driver
+
+### Deferred by design (each table is added in the phase that needs it)
+
+- Read state: a column on the participant row (Phase 5)
+- Reactions, stars, and the "delete for me" hidden-messages table (Phase 7)
+- Attachments (Phase 8)
+- Blocks (Phase 9)
+- Settings (Phase 11)
+
+### Carried forward to later phases
+
+- Phase 3: replace the seeder's repeated "start a direct chat" rule with one shared place; call the policy on every conversation route; list messages only through `visibleMessages()`
+- Phase 4: live-channel authorization must exclude people who left
+- Phase 6: set `joined_at` at or before the "X joined" system message
+- Phase 7: how to show a reply that quotes a message the viewer cannot see; how "delete for everyone" rows are listed; the hide flag for "delete chat" and the matching change to the policy
+- Phase 13: boundary tests for every conversation route; a guard test that message listing goes through `visibleMessages()`
+- Phase 14: indexing review (conversation list)
+- Phase 16: re-verify the database engine; revisit sequential ids in URLs if random ones are wanted
 
 ## Phase 3 — Core Messaging (Without Real-Time)
 
@@ -148,7 +170,9 @@ Planned:
 - Infinite scroll / load older messages
 - Optimistic sending with retry on failure
 - Enter to send, Shift+Enter for a new line
-- Search users and start a chat
+- Search users and start a chat (one shared place for the direct-chat rule, also used by the seeder)
+- Policy checks (`view`, `send`) on every conversation route, with a read-only bar for a leaver
+- Message listing only through `Participant::visibleMessages()`
 - Skeleton loaders, empty states, friendly error states
 - Responsive layout: two panes on desktop, list-then-chat on mobile
 - Central API layer handling expired sessions and errors
@@ -161,7 +185,7 @@ Planned:
 
 - Polling, long polling and WebSockets compared
 - Laravel Reverb and Laravel Echo
-- Private channels and channel authorization
+- Private channels and channel authorization (people who left must not receive live messages)
 - Live message delivery
 - Live chat-list updates and reordering
 - Message status ticks: sending, sent, delivered, read
@@ -173,7 +197,7 @@ Planned:
 
 Planned:
 
-- Per-user last-read tracking per conversation
+- Per-user last-read tracking per conversation (a column on the participant row)
 - Unread badges
 - Mark as unread
 - "Seen by" lists in groups
@@ -184,7 +208,7 @@ Planned:
 Planned:
 
 - Create a group with name, photo and description
-- Add and remove members
+- Add and remove members (set `joined_at` at or before the "X joined" system message)
 - Admin and member roles
 - Leave a group
 - Transfer admin before the last admin leaves
@@ -198,12 +222,13 @@ Planned:
 
 Planned:
 
-- Reply to a message (quoted preview, jump to original)
+- Reply to a message (quoted preview, jump to original; decide how to show a quote of a message the viewer cannot see)
 - Emoji reactions
 - Emoji picker
 - Edit a message, with an "edited" label
-- Delete for me
-- Delete for everyone, with a "This message was deleted" placeholder
+- Delete for me (a separate hidden-messages table)
+- Delete for everyone, with a "This message was deleted" placeholder (decide how soft-deleted rows are listed, and whether the body is erased; deleted bodies are never sent to the client)
+- Delete chat: a hide flag on the participant row, and the policy's `view` becomes "has a participant row and has not hidden the chat"
 - Copy text
 - Forward a message to another chat
 - Star / save messages
@@ -241,7 +266,7 @@ Planned:
 Planned:
 
 - Delete chat
-- Clear chat
+- Clear chat (the `cleared_at` column already exists on the participant row)
 - Archive chat
 - Pin chats to the top
 - Mute chats
@@ -298,8 +323,9 @@ Planned:
 
 - Create the `chat_app_test` database (`utf8mb4_unicode_ci`), point `phpunit.xml` at it, and repair or replace the starter kit's existing tests (and its GitHub Actions test workflow)
 - Authentication tests (registration, login, email verification, password reset, rate limiting, two-factor, passkeys, Google sign-in)
-- Pest feature and unit tests, run against MySQL
-- Policy and authorization boundary tests
+- Pest feature and unit tests, run against the same database engine as development (MariaDB locally)
+- Policy and authorization boundary tests (every conversation route visited as a stranger expects 404; a leaver can read but not post)
+- A guard test that message listing goes through `Participant::visibleMessages()`
 - Broadcasting and channel authorization tests
 - Exception handler tests
 - Review of tests that lock in wrong behavior
@@ -313,19 +339,19 @@ Planned:
 Planned:
 
 - N+1 query detection and eager loading, with lazy-loading prevention switched on
-- Indexing review
+- Indexing review (including the conversation list, deferred from Phase 2)
 - Caching
 - Cursor pagination review
 - Transaction policy review
 - Queues for notifications and media processing
-- Connection tuning for a hosted MySQL database
+- Connection tuning for a hosted MySQL-compatible database
 
 ## Phase 15 — Docker & Developer Tooling
 
 Planned:
 
 - Multi-stage Dockerfile
-- Docker Compose: app, Reverb, queue worker, scheduler, MySQL
+- Docker Compose: app, Reverb, queue worker, scheduler, database (engine and version re-verified first: MySQL or MariaDB)
 - Environment validation
 - Formatting, linting and static analysis enforcement (Vite+ `check`, Laravel Pint, PHPStan)
 - Git hooks
@@ -337,6 +363,7 @@ Planned:
 Planned:
 
 - Host chosen from options verified as card-free
+- Database engine and version checked against Laravel 13's support and the host's offering (the local MariaDB 10.4.32 may be out of maintenance)
 - Production configuration and secrets management
 - HTTPS, CORS and trusted proxies
 - Database migration strategy
@@ -351,6 +378,7 @@ Planned:
 - Passkey domain binding and a dedicated `user_handle_secret` (passkeys are tied to the site domain)
 - Decide whether to keep Inertia SSR (it needs a Node process on the host)
 - Disable development-only routes in production (Inertia devtools, Boost browser logs)
+- Revisit sequential ids in URLs if random public ids are wanted
 - Free-tier realities: sleeping, wake-up delay, ephemeral disks
 
 ## Deferred or Excluded
