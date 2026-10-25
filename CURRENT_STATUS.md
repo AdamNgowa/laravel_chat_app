@@ -1,76 +1,95 @@
 # CURRENT_STATUS
 
-# Phase 2 — Data Model
+# Phase 3 — Core Messaging (Without Real-Time)
 
-**Status: DONE** (last updated 2026-10-23)
+**Status: IN PROGRESS** (last updated 2026-10-25)
 
-Target: the chat database schema designed, migrated, modelled and protected, understood end to end. Tests come in Phase 13, so each step is verified with `php artisan migrate:status`, Tinker and the database tables. Because the app is in development, the database can be wiped and rebuilt (`php artisan migrate:fresh --seed`) whenever the schema changes.
+Target: a person can log in, see their conversations, open one, read the messages they are allowed to see, scroll back through history, send a message and start a new chat, all without real-time delivery (new messages from others appear after a reload). Phase 2 is DONE (data model, factories, seeder, `ConversationPolicy`). Tests come in Phase 13, so each step is verified in the browser, in Tinker and with `npm run types:check` (baseline: 0 errors). After `php artisan migrate:fresh --seed`, log in with `test@example.com` / `password`.
 
 Open items:
 
 - Database engine: MariaDB 10.4.32 through Laravel's `mysql` driver. Before Phase 15 (Docker) and Phase 16, check Laravel 13's supported versions, whether 10.4 is still maintained, and what engine the chosen free host runs.
-- Phase 3: the seeder repeats the "start a direct chat" rule (ordered pair, participant rows). Replace that duplication with one shared place that both the seeder and the real feature use.
-- Phase 3: every conversation route must call `Gate::authorize` (`view` to read, `send` to post). The frontend should show a leaver a read-only bar, not an error page.
+- Groups have no name: the `conversations` table has no `name` column. Decide in 3.2.0: show member names, or add a nullable `name` column now (the database can be wiped and rebuilt).
+- Layout: `app.tsx` gives every page outside `welcome`, `auth/` and `settings/` the starter kit's sidebar `AppLayout`. Decide in 3.2.0 whether chats live inside it or get their own full-height layout.
+- The seeder repeats the "start a direct chat" rule (ordered pair, participant rows). Replace that with one shared place used by both the seeder and the real feature (3.7).
+- A leaver (member with `left_at` set) can read their window but not post: the UI shows a read-only bar, not an error page (3.5).
+- Check Inertia's own append/merge features for loading older messages before choosing `fetch` for good (3.4).
 - Phase 4: live-channel authorization must exclude people who left (use `send`-style logic, not `view`).
-- Phase 6: when adding someone to a group, set their `joined_at` at or before the "X joined" system message's `created_at`. The strict visibility rule would otherwise hide that message from the person it is about.
-- Phase 7: a reply can quote a message the viewer is not allowed to see (sent before they joined). Decide how the quote is shown. Also decide how "delete for everyone" rows are listed (soft-deleted rows are hidden by default, but a "message deleted" placeholder needs them).
-- Phase 7: add the hide flag on the participant row ("delete chat"), and change the policy's `view` to "has a participant row and has not hidden the chat". Also add the separate "delete for me" table.
-- Phase 14: indexing review. No extra index was added for the conversation list in Phase 2.
-- Phase 16: plain sequential ids are used in URLs for now (safe because every access is authorized and non-members get an identical 404). Revisit if public or random ids are wanted.
+- Phase 6: when adding someone to a group, set their `joined_at` at or before the "X joined" system message's `created_at`.
+- Phase 7: how to show a reply that quotes a message the viewer cannot see; how "delete for everyone" rows are listed; the hide flag for "delete chat" and the matching change to the policy's `view`.
+- Phase 13: test every conversation route as a stranger (expect 404); a guard test that message listing goes through `visibleMessages()`.
+- Phase 14: indexing review (the conversation list was deliberately not indexed in Phase 2).
+- Phase 16: plain sequential ids are used in URLs (safe because every access is authorized and non-members get an identical 404). Revisit if random public ids are wanted.
 
-Rules adopted (2.5.1):
+Rules carried from Phase 2:
 
-- PHP runs in UTC (`config/app.php`).
-- The database connection is pinned to `+00:00` (`config/database.php`, `mysql` and `mariadb` blocks).
-- Our own tables never rely on database-generated times: no `useCurrent()`, no `DB::raw('now()')`, no `DEFAULT CURRENT_TIMESTAMP`. Laravel's `failed_jobs` table has one, which is harmless because the session is UTC.
-- Times are converted to the viewer's zone only at the edge, in the browser (Phase 3).
-- Pinning on day one matters: old TIMESTAMP rows written under a different session zone would read hours off after the pin.
-- Rows whose times are compared (messages, participants) are written through their models, which store microseconds. Raw `DB::table()` inserts are not used for them.
-
-Rules adopted (2.4.4 to 2.7):
-
-- All message-listing code goes through `Participant::visibleMessages()`, never `Message::query()` directly. A Phase 13 test should guard this.
+- All message-listing code goes through `Participant::visibleMessages()`, never `Message::query()` directly. This includes the chat list's last-message preview: a cleared or left chat must not preview a message the viewer can no longer see.
+- Every conversation route calls `Gate::authorize` (`view` to read, `send` to post). Non-members get 404; a leaver denied posting gets 403 with a message. Hiding a button in the UI protects nothing.
 - Server-set fields (`sender_id`, `conversation_id`) are never mass-assignable and never come from a request.
-- Non-members get a 404 on every conversation route (hides existence, prevents id enumeration). A member denied one specific action (a leaver posting) gets a 403 with a message.
-- Hiding a button in the UI protects nothing: the policy must run on every route. A Phase 13 test should visit every conversation route as a stranger and expect 404.
+- PHP runs in UTC and the database connection is pinned to `+00:00`. Times are converted to the viewer's zone only in the browser.
+- Rows whose times are compared (messages, participants) are written through their models (microsecond precision), never raw `DB::table()` inserts.
 
-- 2.1 Design Decisions: DONE (see earlier entries 2.1.1 to 2.1.5, unchanged)
-  **Status: DONE**
+Rules adopted (Phase 3):
 
-- 2.2 Core Tables
-    - 2.2.1 `conversations` migration - DONE
-    - 2.2.2 Participants migration - DONE (`dateTime` for the window columns, because a MariaDB `timestamp` silently gets a default and an "on update" rule)
-    - 2.2.3 `messages` migration - DONE (retry-safe client id, three foreign-key rules)
-    - 2.2.4 Indexes - DONE (verified with `EXPLAIN`; messages are ordered by `id`)
-    - 2.2.5 Run migrations and inspect the tables - DONE (`migrate:status` all Ran, `migrate:fresh --seed` rebuilds from scratch)
+- Data that a page needs on arrival (chat list, first page of messages) arrives as Inertia props from a controller.
+- Actions inside an already-open page (older messages, sending) use JSON `fetch` through one central wrapper that handles 401, 419, 403 and 404 in a single place.
+- An open chat has the URL `/chats/{conversation}` (plain integer id). Refresh, Back, a new tab and phone Back all work from the URL alone.
+- Chat routes live inside the existing `auth` and `verified` group in `routes/web.php`, and call the policy.
+- React calls Wayfinder's generated route functions, never hand-typed URL strings.
+
+- 3.1 Architecture: how data reaches the browser
+    - 3.1.1 Props versus JSON `fetch` - DONE (props on arrival; `fetch` for older messages and sending, through one central wrapper)
+    - 3.1.2 URL shape for an open chat - DONE (`/chats/{conversation}`)
       **Status: DONE**
 
-- 2.3 Tables Created Later: DEFERRED BY DESIGN (unchanged: read state Phase 5, reactions/stars/hidden-messages Phase 7, attachments Phase 8, blocks Phase 9, settings Phase 11)
+- 3.2 Chat list (backend and UI)
+    - 3.2.0 Design - NOT STARTED (group name decision, layout decision, list query ordered by latest activity, preview respecting the visibility window, how a direct chat and a self-chat are named)
+    - 3.2.1 Route, controller and Inertia props for `/chats` - NOT STARTED
+    - 3.2.2 TypeScript types for a chat-list item - NOT STARTED
+    - 3.2.3 Chat list UI and the sidebar entry - NOT STARTED
+    - 3.2.4 Verify in the browser with seeded data - NOT STARTED
+      **Status: NOT STARTED**
 
-- 2.4 Models and Relationships
-    - 2.4.1 PHP enums `ConversationType` and `MessageType` - DONE (in `app/Enums/`; backed enums, cast on the models)
-    - 2.4.2 `Conversation`, `Participant` and `Message` models, with casts - DONE (verified in Tinker: enum and date casts, relationships, mass-assignment guard on `sender_id` and `conversation_id`, soft delete, bad enum value rejected, cascade)
-    - 2.4.3 Relationships on `User` - DONE (`participants`, `sentMessages`; verified in Tinker, including cascade)
-    - 2.4.4 Visibility-window query rule - DONE (`Participant::visibleMessages()`; window is the later of `joined_at` and `cleared_at` up to `left_at`; ties hidden; boundaries formatted with microseconds; verified to the microsecond in Tinker; bug fixed: `m` month used instead of `i` minutes)
-    - 2.4.5 Verify relationships in Tinker - DONE (verified across 2.4.2 and 2.4.3)
-      **Status: DONE**
+- 3.3 Open a chat: newest messages and timestamps
+    - 3.3.1 Route `/chats/{conversation}` with `Gate::authorize('view')`; first page of messages through `visibleMessages()` - NOT STARTED
+    - 3.3.2 TypeScript `Message` type and the message list UI - NOT STARTED
+    - 3.3.3 Adaptive timestamps ("10:42", "Yesterday", "Mon", "12/10/26") and date separators, converted from UTC in the browser - NOT STARTED
+    - 3.3.4 Auto-scroll to the newest message - NOT STARTED
+    - 3.3.5 Verify: member, stranger (404), made-up id (404), leaver (read-only) - NOT STARTED
+      **Status: NOT STARTED**
 
-- 2.5 Time and Deletion Rules
-    - 2.5.1 UTC timestamp storage - DONE (demonstrated that a TIMESTAMP shifts with the session zone and a DATETIME does not; `'timezone' => '+00:00'` in both connection blocks; database rebuilt; verified `@@session.time_zone` is `+00:00` and no ON UPDATE rule exists)
-    - 2.5.2 Soft deletes - DONE (messages only, verified in Tinker at 2.4.2; none on conversations or participants by design)
-      **Status: DONE**
+- 3.4 Load older messages
+    - 3.4.1 Design: pagination by `id`, and Inertia merge/append versus `fetch` - NOT STARTED
+    - 3.4.2 Central `fetch` wrapper (expired session 401/419, errors) - NOT STARTED
+    - 3.4.3 Endpoint and infinite scroll upward, keeping the scroll position - NOT STARTED
+    - 3.4.4 "Scroll to bottom" button - NOT STARTED
+    - 3.4.5 Verify on the 2,000-message chat - NOT STARTED
+      **Status: NOT STARTED**
 
-- 2.6 Factories and Seeders
-    - 2.6.0 Design - DONE (factories build one valid row; the seeder builds a reachable world; states for direct, group, left, cleared, system, reply, deleted; messages created in chronological order; dev-only guard before Phase 16)
-    - 2.6.1 Factories for the new models - DONE (`ConversationFactory::direct` builds the ordered pair and the membership rows, one for a self-chat; `ParticipantFactory` joinedAt/leftAt/clearedAt; `MessageFactory` system/sentAt/replyingTo; built-in `trashed()`; `for($user, 'sender')` works; verified in Tinker, including `visibleMessages()` on factory data)
-    - 2.6.2 Seed realistic conversations and messages - DONE (verified: 8 conversations, 19 participants, 2,330 messages; all three invariants return 0; visibleMessages() works on seeded data; guard refuses to run in production)
-      **Status: DONE**
+- 3.5 Send a message
+    - 3.5.1 Validation, endpoint and `Gate::authorize('send')` - NOT STARTED
+    - 3.5.2 Retry safety with `client_uuid` (a duplicate returns the existing message) - NOT STARTED
+    - 3.5.3 Composer UI and the leaver's read-only bar - NOT STARTED
+    - 3.5.4 Verify: send, retry with the same uuid, stranger 404, leaver 403 - NOT STARTED
+      **Status: NOT STARTED**
 
-- 2.7 Authorization
-    - 2.7.0 Authorization design - DONE (theory). `view` = has participant row (Phase 7 adds "and chat not hidden"); `send` = `view` and `left_at` is null. Non-members get 404 on every conversation route (hides existence, prevents id enumeration); members denied a specific action (a leaver posting) get 403. Sequential ids kept, because every access is authorized. Phase 4: live-channel authorization must exclude leavers. Phase 13: test every conversation route as a stranger expecting 404.
-    - 2.7.1 Write ConversationPolicy (view, send) - DONE (`app/Policies/ConversationPolicy.php`; both methods return a `Response`; view = has a participant row, else `denyAsNotFound()`; send = view and left_at null, else `deny()` with a message for leavers; unused generated stubs removed; auto-discovery confirmed via `Gate::getPolicyFor`)
-    - 2.7.2 Verify authorization boundaries in Tinker - DONE (stranger 404 on view and send; member allowed; leaver can view but not send, with message)
-    - Phase 3 TODO: call `Gate::authorize` on every conversation route; Phase 13 test every route as a stranger expecting 404
-      **Status: DONE**
+- 3.6 Optimistic sending and retry
+    - 3.6.1 Show the message at once, then confirm - NOT STARTED
+    - 3.6.2 Failure state and retry button - NOT STARTED
+    - 3.6.3 Enter to send, Shift+Enter for a new line, controls disabled in flight - NOT STARTED
+      **Status: NOT STARTED**
 
-**NEXT STEP: Phase 3 — Core Messaging (Without Real-Time). Begin with Step 1 (architecture and theory, no code). Request the current `CURRENT_STATUS.md`, `PROJECT_CHARTER.md` and `FOLDER_STRUCTURE.md` first.**
+- 3.7 Search users and start a chat
+    - 3.7.1 One shared place for the direct-chat rule (used by the seeder too) - NOT STARTED
+    - 3.7.2 User search endpoint and UI - NOT STARTED
+    - 3.7.3 Start or open the chat; a duplicate-key race returns the existing chat - NOT STARTED
+      **Status: NOT STARTED**
+
+- 3.8 Responsive layout, loading and error states, protection
+    - 3.8.1 Two panes on desktop, list-then-chat on mobile - NOT STARTED
+    - 3.8.2 Skeleton loaders, empty states, friendly error states - NOT STARTED
+    - 3.8.3 Basic expired-session handling (401/419) in the central wrapper - NOT STARTED
+    - 3.8.4 Rate limiting and spam protection on message sending - NOT STARTED
+      **Status: NOT STARTED**
+
+**NEXT STEP: 3.2.0 design (group name, layout, chat-list query). Before any code, request the current `app/Models/Participant.php`, `Message.php`, `User.php` and `routes/web.php`.**
