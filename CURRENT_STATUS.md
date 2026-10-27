@@ -44,11 +44,11 @@ Rules adopted (Phase 3):
 
 - 3.2 Chat list (backend and UI)
     - 3.2.0 Design - NOT STARTED (group name decision, layout decision, list query ordered by latest activity, preview respecting the visibility window, how a direct chat and a self-chat are named)
-    - 3.2.1 Route, controller and Inertia props for `/chats` - NOT STARTED
-    - 3.2.2 TypeScript types for a chat-list item - NOT STARTED
-    - 3.2.3 Chat list UI and the sidebar entry - NOT STARTED
-    - 3.2.4 Verify in the browser with seeded data - NOT STARTED
-      **Status: NOT STARTED**
+    - 3.2.1 Route, controller and Inertia props for `/chats` - DONE (verified as David the leaver: 2 chats, `has_left: true` on the left group, preview older than `left_at`; Test User's 7-chat list to be glanced at during 3.2.3). Routes live in `routes/chats.php`, required from `web.php` like `settings.php`. Query cost: 4 queries plus 2 per chat (known, fixed in Phase 14). Plan: `/chats` and `/chats/{id}` render the same page component so a chat click can use a partial reload; confirm in the Network tab at 3.3; check docs for the installed Inertia version first. No `prefetch` on chat links.
+    - 3.2.2 TypeScript types for a chat-list item - DONE (`types/chat.ts` with `ChatSummary` and `ChatPreview`; exported from `types/index.ts`; verified: `types:check` 0 errors; a deliberate `chat.name` typo gave `TS2339` while the page still ran and showed blank titles; Test User's 7 chats shown; cost: PHP array and TS type are kept in sync by hand)
+    - 3.2.3 Chat list UI, `ChatLayout` and the sidebar entry - DONE (`layouts/chat-layout.tsx`; new `chats/` case in `app.tsx`; `components/chat/chat-list.tsx` and `chat-avatar.tsx`; page renders the list plus an empty "Select a chat" panel on desktop; user menu reuses `UserMenuContent` in a plain dropdown, not `NavUser`; rows are not links until 3.3; no sidebar entry, since chats have their own layout; narrowing introduced for `ChatPreview | null`). Known wart: `ChatAvatar` strips the " (You)" suffix from the title to get initials; replace with a server-sent `avatar_name` in Phase 11.
+    - 3.2.4 Verify in the browser with seeded data - DONE (Test User: 7 chats, Emma first; David: leaver group shows "Left", preview older than `left_at`; phone width shows list only; settings, dashboard and profile pages unchanged)
+      **Status: DONE**
 
 - 3.3 Open a chat: newest messages and timestamps
     - 3.3.1 Route `/chats/{conversation}` with `Gate::authorize('view')`; first page of messages through `visibleMessages()` - NOT STARTED

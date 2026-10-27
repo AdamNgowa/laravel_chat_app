@@ -56,4 +56,31 @@ class Conversation extends Model
     {
         return $this->hasMany(Message::class);
     }
+
+        /**
+     * The title this viewer sees in their chat list.
+     *
+     * Direct chat: the other person's name (your own name for a chat with yourself).
+     * Group: the other current members' names, up to three, until Phase 6 adds a real name.
+     * Expects `participants.user` to be loaded; otherwise it queries lazily, one chat at a time.
+     */
+    public function titleFor(User $viewer): string
+    {
+        $others = $this->participants->where('user_id', '!=', $viewer->id);
+
+        if ($this->type === ConversationType::Direct) {
+            return $others->first()?->user->name ?? $viewer->name.' (You)';
+        }
+
+        $names = $others->whereNull('left_at')->pluck('user.name');
+
+        if ($names->isEmpty()) {
+            return 'Group';
+        }
+
+        $extra = $names->count() - 3;
+        $shown = $names->take(3)->implode(', ');
+
+        return $extra > 0 ? "{$shown} +{$extra}" : $shown;
+    }
 }
