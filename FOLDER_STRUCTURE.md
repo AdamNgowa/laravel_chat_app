@@ -42,6 +42,7 @@ chat-app/
 │   │   └── MessageType.php                 # text | system
 │   ├── Http/
 │   │   ├── Controllers/
+│   │   │   ├── ChatController.php          # chat list, open chat and its first page of messages
 │   │   │   ├── Controller.php
 │   │   │   └── Settings/
 │   │   │       ├── ProfileController.php   # profile edit, update, delete account
@@ -150,6 +151,11 @@ chat-app/
 │       │   ├── two-factor-setup-modal.tsx
 │       │   ├── user-info.tsx
 │       │   ├── user-menu-content.tsx
+│       │   ├── chat/                # pieces of the chat screen
+│       │   │   ├── chat-avatar.tsx  # initials, or a people icon for groups
+│       │   │   ├── chat-list.tsx    # left pane: header, user menu and chat rows
+│       │   │   ├── chat-panel.tsx   # the open chat: header, messages, read-only bar
+│       │   │   └── message-bubble.tsx
 │       │   └── ui/                  # shadcn/ui building blocks (owned source files)
 │       │       ├── alert.tsx, avatar.tsx, badge.tsx, breadcrumb.tsx, button.tsx
 │       │       ├── card.tsx, checkbox.tsx, collapsible.tsx, dialog.tsx
@@ -169,6 +175,7 @@ chat-app/
 │       ├── layouts/
 │       │   ├── app-layout.tsx
 │       │   ├── auth-layout.tsx
+│       │   ├── chat-layout.tsx      # full-height shell for chat pages
 │       │   ├── app/
 │       │   │   ├── app-header-layout.tsx
 │       │   │   └── app-sidebar-layout.tsx
@@ -179,6 +186,7 @@ chat-app/
 │       │   └── settings/
 │       │       └── layout.tsx
 │       ├── lib/
+│       │   ├── time.ts              # UTC to the viewer's local time, list and day labels
 │       │   └── utils.ts
 │       ├── pages/                   # one file per screen, named by Laravel routes and Fortify views
 │       │   ├── dashboard.tsx
@@ -191,12 +199,15 @@ chat-app/
 │       │   │   ├── reset-password.tsx
 │       │   │   ├── two-factor-challenge.tsx
 │       │   │   └── verify-email.tsx
+│       │   ├── chats/
+│       │   │   └── index.tsx        # chat list plus the open chat (one page for /chats and /chats/{id})
 │       │   └── settings/
 │       │       ├── appearance.tsx
 │       │       ├── profile.tsx
 │       │       └── security.tsx
 │       └── types/
 │           ├── auth.ts
+│           ├── chat.ts
 │           ├── global.d.ts
 │           ├── index.ts
 │           ├── navigation.ts
@@ -204,6 +215,7 @@ chat-app/
 │           └── vite-env.d.ts
 │
 ├── routes/
+│   ├── chats.php                    # chat routes: the list and one open chat
 │   ├── console.php
 │   ├── settings.php
 │   └── web.php                      # page routes; Fortify adds login, register and the rest
