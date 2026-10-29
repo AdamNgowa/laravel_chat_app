@@ -30,6 +30,10 @@ export type ActiveChat = {
     type: "direct" | "group";
     title: string;
     can_send: boolean;
-    has_more: boolean;
-    messages: ChatMessage[]; // oldest first
+};
+
+// The server pages the messages. We type only the part we read.
+// Page order is newest first, because the server pages backwards through history.
+export type MessagePage = {
+    data: ChatMessage[];
 };

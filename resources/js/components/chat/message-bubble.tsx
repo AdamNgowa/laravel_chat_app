@@ -19,7 +19,7 @@ export function MessageBubble({ message, showSender }: Props) {
     return (
         <div
             className={cn(
-                "flex",
+                "flex py-0.5",
                 message.is_mine ? "justify-end" : "justify-start",
             )}
         >

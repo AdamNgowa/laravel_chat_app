@@ -1,4 +1,4 @@
-import { Link, usePage } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import { ChatAvatar } from "@/components/chat/chat-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -89,10 +89,27 @@ export function ChatList({ chats, activeId }: Props) {
                 <ul className="flex-1 overflow-y-auto">
                     {chats.map((chat) => (
                         <li key={chat.id} className="border-b">
-                            <Link
-                                href={showChat(chat.id)}
-                                only={["activeChat"]}
-                                preserveState
+                            <a
+                                href={showChat.url(chat.id)}
+                                onClick={(event) => {
+                                    // Let the browser handle new-tab clicks (ctrl/cmd/shift/middle button).
+                                    if (
+                                        event.button !== 0 ||
+                                        event.metaKey ||
+                                        event.ctrlKey ||
+                                        event.shiftKey ||
+                                        event.altKey
+                                    ) {
+                                        return;
+                                    }
+
+                                    event.preventDefault();
+                                    router.visit(showChat.url(chat.id), {
+                                        only: ["activeChat", "messages"],
+                                        reset: ["messages"],
+                                        preserveState: true,
+                                    });
+                                }}
                                 aria-current={
                                     chat.id === activeId ? "page" : undefined
                                 }
@@ -126,7 +143,7 @@ export function ChatList({ chats, activeId }: Props) {
                                         )}
                                     </div>
                                 </div>
-                            </Link>
+                            </a>
                         </li>
                     ))}
                 </ul>

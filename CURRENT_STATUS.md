@@ -63,15 +63,14 @@ Rules adopted (Phase 3):
     - 3.3.3 Adaptive timestamps and date separators, converted from UTC in the browser - DONE (`lib/time.ts`: `formatClock`, `formatListTime`, `formatDayLabel`, `dayKey`; calendar days in the viewer's zone, a week or older shows a date; verified against the UTC values). TypeScript cannot catch a missing conversion (a string in, a string out), so one tested function is the defence.
     - 3.3.4 Auto-scroll to the newest message - DONE (`useLayoutEffect` keyed on `chat.id` sets the scroll container to the bottom before paint; typed ref with a null check; verified on desktop and phone width, including a short chat with nothing to scroll)
     - 3.3.5 Verify: member, stranger (404), made-up id (404), leaver (read-only) - DONE (covered by the 3.3.1 and 3.3.2 checks). Network-tab confirmation of the partial reload is still open (see Open items).
-      **Status: DONE, except the Network-tab confirmation**
+      **Status: DONE**
 
 - 3.4 Load older messages
-    - 3.4.1 Design: cursor (keyset) pagination by `id`; Inertia `<InfiniteScroll reverse>` with `Inertia::scroll()` versus our own JSON endpoint - IN PROGRESS (docs read; decision and a short spike pending, see Open items)
-    - 3.4.2 Backend: older messages through `visibleMessages()` with a cursor, never skipping or repeating a message when new ones arrive - NOT STARTED
-    - 3.4.3 Frontend: load older as you scroll up, keep the scroll position, reset when switching chats - NOT STARTED
-    - 3.4.4 "Scroll to bottom" button with a new-message count - NOT STARTED
-    - 3.4.5 Verify on the 2,000-message chat - NOT STARTED
-      **Status: IN PROGRESS**
+    - 3.4.1 Design - DONE (decision: Option A, Inertia's `<InfiniteScroll reverse>` + `Inertia::scroll()`)
+    - 3.4.2 Backend: older messages through `visibleMessages()` with a cursor - DONE
+    - 3.4.3 Frontend: load older as you scroll up - DONE. Finding: `reset` is a visit option, not a `Link` prop, so chat rows are `<a>` elements calling `router.visit(url, { only: ['activeChat','messages'], reset: ['messages'], preserveState: true })`. Known polish: new pages appear abruptly (parked).
+    - 3.4.4 "Scroll to bottom" button - DONE (verified: appears on scroll-up, smooth scroll works, phone width fine; self-chat no-leftover check unconfirmed)
+    - 3.4.5 Verify on the big chat - MOSTLY DONE (Test User sees 1950 messages in chat 5 = 39 full pages; David's `/chats/7` stops at group creation, nothing after `left_at`; partial-reload headers confirmed: `x-inertia-partial-data: activeChat,messages` + `x-inertia-reset: messages`). Open: end-of-history stop (does "Loading older messages…" stop cleanly at 1950?). KNOWN DEFECT: after the first older-page load, later loads at scrollTop 0 chain into each other (hypothesis: no native scroll anchoring at scrollTop 0); snapshot-correction attempt under test.
 
 - 3.5 Send a message
     - 3.5.0 Transport: check Inertia v3's own plain-HTTP helper; build a central wrapper (expired session 401/419, 403, 404 in one place) only if needed - NOT STARTED

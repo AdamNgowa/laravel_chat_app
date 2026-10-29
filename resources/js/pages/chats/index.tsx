@@ -1,15 +1,18 @@
 import { Head } from "@inertiajs/react";
 import { ChatList } from "@/components/chat/chat-list";
-import type { ActiveChat, ChatSummary } from "@/types";
-import { cn } from "@/lib/utils";
 import { ChatPanel } from "@/components/chat/chat-panel";
+import { cn } from "@/lib/utils";
+import type { ActiveChat, ChatSummary, MessagePage } from "@/types";
 
 type Props = {
     chats: ChatSummary[];
     activeChat: ActiveChat | null;
+    messages: MessagePage | null;
 };
 
-export default function ChatsIndex({ chats, activeChat }: Props) {
+export default function ChatsIndex({ chats, activeChat, messages }: Props) {
+    console.log(messages); // temporary: shows what the server sends. Remove after the spike.
+
     return (
         <>
             <Head title={activeChat?.title ?? "Chats"} />
@@ -20,12 +23,14 @@ export default function ChatsIndex({ chats, activeChat }: Props) {
                     activeChat === null ? "hidden md:flex" : "flex",
                 )}
             >
-                {activeChat === null ? (
-                    <p className="p-6 text-sm text-muted-foreground">
-                        Select a chat to start messaging
-                    </p>
+                {activeChat === null || messages === null ? (
+                    <div className="flex flex-1 items-center justify-center">
+                        <p className="text-sm text-muted-foreground">
+                            Select a chat to start messaging
+                        </p>
+                    </div>
                 ) : (
-                    <ChatPanel chat={activeChat} />
+                    <ChatPanel chat={activeChat} messages={messages.data} />
                 )}
             </section>
         </>

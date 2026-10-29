@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Models\Participant;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -16,10 +17,11 @@ use Inertia\Response;
 
 class ChatController extends Controller
 {
-    /** How many messages one page holds */
+    /** How many messages one page holds. */
     private const PAGE_SIZE = 50;
+
     /**
-     *  The chat list with no open chat.
+     * The chat list with no chat open.
      */
     public function index(Request $request): Response
     {
@@ -27,24 +29,31 @@ class ChatController extends Controller
 
         return Inertia::render('chats/index', [
             'chats' => fn () => $this->chatList($viewer),
-            'activeChat'=> null,
-            ]);
+            'activeChat' => null,
+            'messages' => null,
+        ]);
     }
 
-    /** The chat list with one chaat open. Same page component as index(), so a 
-     *  Click on that chat can ask for just `activeChat` a partial reload
+    /**
+     * The chat list with one chat open. Same page component as index(), so a
+     * click on a chat can ask for just `activeChat` and `messages`.
      */
-
-    public function show(Request $request, Conversation $conversation) : Response
+    public function show(Request $request, Conversation $conversation): Response
     {
-        //Runs on every request, never lazily. A stranger gets a 404 here.
-        Gate::authorize('view',$conversation);
+        // Runs on every request, including the ones that only ask for older messages.
+        // A stranger gets a 404 here.
+        Gate::authorize('view', $conversation);
 
         $viewer = $request->user();
 
-        return Inertia::render('chats/index',[
+        $membership = $conversation->participants()
+            ->where('user_id', $viewer->id)
+            ->firstOrFail();
+
+        return Inertia::render('chats/index', [
             'chats' => fn () => $this->chatList($viewer),
-            'activeChat' => fn () => $this->activeChat($viewer,$conversation)
+            'activeChat' => fn () => $this->activeChat($viewer, $conversation),
+            'messages' => Inertia::scroll(fn () => $this->messagePage($viewer, $membership)),
         ]);
     }
 
@@ -56,11 +65,10 @@ class ChatController extends Controller
         return $viewer->participants()
             ->with('conversation.participants.user')
             ->get()
-            ->map(fn(Participant $membership) => $this->summary($viewer,$membership))
+            ->map(fn (Participant $membership) => $this->summary($viewer, $membership))
             ->sortByDesc('last_activity_at')
             ->values();
     }
-
 
     /**
      * One row of the chat list. The preview comes only from messages this
@@ -93,37 +101,41 @@ class ChatController extends Controller
         ];
     }
 
+    /**
+     * The open chat's header data. The messages are a separate prop.
+     *
+     * @return array<string, mixed>
+     */
     private function activeChat(User $viewer, Conversation $conversation): array
     {
-        $membership = $conversation->participants()
-            ->where('user_id',$viewer->id)
-            ->firstOrFail();
-        
-        // One row more than a page tells us whether older messages exist.
-        $rows =  $membership->visibleMessages()
-            ->with('sender:id,name')
-            ->latest('id')
-            ->limit(self::PAGE_SIZE + 1)
-            ->get();
-            
-        $page = $rows->take(self::PAGE_SIZE)->reverse()->values();
-        
         $conversation->loadMissing('participants.user');
 
         return [
             'id' => $conversation->id,
             'type' => $conversation->type->value,
             'title' => $conversation->titleFor($viewer),
-            'can_send' => Gate::allows('send',$conversation),
-            'has_more' => $rows->count() > self::PAGE_SIZE,
-            'messages' => $page
-                ->map(fn(Message $message) => $this->messageData($viewer,$message))
-                ->all()
+            'can_send' => Gate::allows('send', $conversation),
         ];
     }
 
     /**
-     * @return array<string,mixed>
+     * One page of the viewer's visible messages, newest first. A cursor means
+     * "older than the last message you already have", so new messages arriving
+     * between two requests cannot shift the pages.
+     *
+     * @return CursorPaginator<int, array<string, mixed>>
+     */
+    private function messagePage(User $viewer, Participant $membership): CursorPaginator
+    {
+        return $membership->visibleMessages()
+            ->with('sender:id,name')
+            ->latest('id')
+            ->cursorPaginate(self::PAGE_SIZE)
+            ->through(fn (Message $message) => $this->messageData($viewer, $message));
+    }
+
+    /**
+     * @return array<string, mixed>
      */
     private function messageData(User $viewer, Message $message): array
     {
@@ -132,6 +144,7 @@ class ChatController extends Controller
             'type' => $message->type->value,
             'body' => $message->body,
             'sender_id' => $message->sender_id,
+            'sender_name' => $message->sender->name,
             'is_mine' => $message->sender_id === $viewer->id,
             'created_at' => $message->created_at,
             'edited_at' => $message->edited_at,
