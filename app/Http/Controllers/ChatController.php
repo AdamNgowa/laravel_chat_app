@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Participant;
 use App\Models\User;
+use App\Http\Resources\MessageResource;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Support\Collection;
@@ -53,7 +54,7 @@ class ChatController extends Controller
         return Inertia::render('chats/index', [
             'chats' => fn () => $this->chatList($viewer),
             'activeChat' => fn () => $this->activeChat($viewer, $conversation),
-            'messages' => Inertia::scroll(fn () => $this->messagePage($viewer, $membership)),
+            'messages' => Inertia::scroll(fn () => $this->messagePage($membership)),
         ]);
     }
 
@@ -125,29 +126,14 @@ class ChatController extends Controller
      *
      * @return CursorPaginator<int, array<string, mixed>>
      */
-    private function messagePage(User $viewer, Participant $membership): CursorPaginator
+    private function messagePage(Participant $membership): CursorPaginator
     {
-        return $membership->visibleMessages()
-            ->with('sender:id,name')
-            ->latest('id')
-            ->cursorPaginate(self::PAGE_SIZE)
-            ->through(fn (Message $message) => $this->messageData($viewer, $message));
+    return $membership->visibleMessages()
+        ->with('sender:id,name')
+        ->latest('id')
+        ->cursorPaginate(self::PAGE_SIZE)
+        ->through(fn (Message $message) => MessageResource::make($message)->resolve());
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function messageData(User $viewer, Message $message): array
-    {
-        return [
-            'id' => $message->id,
-            'type' => $message->type->value,
-            'body' => $message->body,
-            'sender_id' => $message->sender_id,
-            'sender_name' => $message->sender->name,
-            'is_mine' => $message->sender_id === $viewer->id,
-            'created_at' => $message->created_at,
-            'edited_at' => $message->edited_at,
-        ];
-    }
+   
 }

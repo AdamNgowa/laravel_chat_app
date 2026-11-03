@@ -11,8 +11,6 @@ type Props = {
 };
 
 export default function ChatsIndex({ chats, activeChat, messages }: Props) {
-    console.log(messages); // temporary: shows what the server sends. Remove after the spike.
-
     return (
         <>
             <Head title={activeChat?.title ?? "Chats"} />

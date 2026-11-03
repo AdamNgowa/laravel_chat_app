@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -24,6 +25,21 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Every "not found" answer to a JSON client gets the same body. Laravel's own
+        // message for a missing model names the model and the id, which would 
+        // allow a caller to tell 'no such chat' from 'not your chat'.
+       $exceptions->render(function (HttpException $e, Request $request){
+            if($e->getStatusCode() === 404 && $request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Not found',
+                ],404);
+            }
+
+            //Allow Laravel to handle other exceptions normally
+            return null;
+       }); 
+
+       //Original JSON exception handling
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

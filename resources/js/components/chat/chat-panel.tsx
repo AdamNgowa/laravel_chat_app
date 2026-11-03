@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { dayKey, formatDayLabel } from "@/lib/time";
 import { index as chatsIndex } from "@/routes/chats";
 import type { ActiveChat, ChatMessage } from "@/types";
+import { MessageComposer } from "./message-composer";
 
 // Original code with repeated pagination trigger bug
 
@@ -61,6 +62,20 @@ export function ChatPanel({ chat, messages }: Props) {
             setNearBottom(isNearBottom(element));
         }
     }, [chat.id]);
+
+    // You just sent a message: show it. (Other people's messages arrive in Phase 4,
+    // with their own rule: only follow them if you are already at the bottom.)
+    const newest = messages[0];
+    const newestId = newest?.id;
+    const newestIsMine = newest?.is_mine ?? false;
+
+    useLayoutEffect(() => {
+        const element = scroller.current;
+
+        if (newestIsMine && element) {
+            element.scrollTop = element.scrollHeight;
+        }
+    }, [newestId, newestIsMine]);
 
     // Older messages were added above the view: keep the reader where they were.
     useLayoutEffect(() => {
@@ -192,7 +207,9 @@ export function ChatPanel({ chat, messages }: Props) {
                 )}
             </div>
 
-            {!chat.can_send && (
+            {chat.can_send ? (
+                <MessageComposer chatId={chat.id} />
+            ) : (
                 <p className="border-t px-4 py-3 text-center text-sm text-muted-foreground">
                     You left this group, so you can no longer send messages.
                 </p>

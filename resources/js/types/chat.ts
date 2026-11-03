@@ -37,3 +37,14 @@ export type ActiveChat = {
 export type MessagePage = {
     data: ChatMessage[];
 };
+
+//What the composer sends to chats/{id}/messages.
+export type SendMessageData = {
+    body: string;
+    client_uuid: string;
+};
+
+//What the server answers
+export type SendMessageResponse = {
+    message: ChatMessage;
+};
