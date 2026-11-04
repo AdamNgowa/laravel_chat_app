@@ -175,7 +175,7 @@ Planned:
 - Message listing only through `Participant::visibleMessages()`
 - Skeleton loaders, empty states, friendly error states
 - Responsive layout: two panes on desktop, list-then-chat on mobile
-- Central API layer handling expired sessions and errors
+- Plain JSON requests through Inertia v3's `useHttp` (decided in 3.5, instead of a hand-built `fetch` wrapper), with expired sessions (401/419) and errors handled in one place (tested in 3.8)
 - Rate limiting and spam protection on message sending
 - Disabled controls while requests are in flight
 

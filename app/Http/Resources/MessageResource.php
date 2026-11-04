@@ -18,13 +18,16 @@ class MessageResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $isMine = $this->sender_id === $request->user()->id;
         return [
             'id' => $this->id,
             'type' => $this->type->value,
             'body' => $this->body,
             'sender_id' => $this->sender_id,
             'sender_name' => $this->sender->name,
-            'is_mine' => $this->sender_id === $request->user()->id,
+            'is_mine' => $isMine,
+            //Only the sender needs this id, to a match a pending bubble to its saved message.
+            'client_uuid' => $isMine ? $this->client_uuid : null,
             'created_at' => $this->created_at,
             'edited_at' => $this->edited_at,
         ];

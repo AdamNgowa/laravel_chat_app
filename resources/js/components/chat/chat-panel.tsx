@@ -2,13 +2,12 @@ import { InfiniteScroll, Link } from "@inertiajs/react";
 import { ArrowDown, ArrowLeft } from "lucide-react";
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { MessageBubble } from "@/components/chat/message-bubble";
+import { MessageComposer } from "@/components/chat/message-composer";
+import { OutgoingBubble } from "@/components/chat/outgoing-bubble";
 import { Button } from "@/components/ui/button";
 import { dayKey, formatDayLabel } from "@/lib/time";
 import { index as chatsIndex } from "@/routes/chats";
-import type { ActiveChat, ChatMessage } from "@/types";
-import { MessageComposer } from "./message-composer";
-
-// Original code with repeated pagination trigger bug
+import type { ActiveChat, ChatMessage, OutgoingMessage } from "@/types";
 
 // How close to the newest message still counts as "at the bottom".
 const NEAR_BOTTOM_PX = 100;
@@ -30,7 +29,7 @@ function DaySeparator({ label }: { label: string }) {
     );
 }
 
-//What scroller looked liked after the last render, to detect a prepend
+// What the scroller looked like after the last render, to detect a prepend.
 type Snapshot = {
     chatId: number;
     oldestId: number;
@@ -42,15 +41,36 @@ type Props = {
     chat: ActiveChat;
     // Newest first, exactly as the server pages them.
     messages: readonly ChatMessage[];
+    // This chat's messages that the server has not confirmed yet.
+    outgoing: readonly OutgoingMessage[];
+    onSend: (body: string) => void;
+    onRetry: (uuid: string) => void;
+    onDiscard: (uuid: string) => void;
 };
 
-export function ChatPanel({ chat, messages }: Props) {
+export function ChatPanel({
+    chat,
+    messages,
+    outgoing,
+    onSend,
+    onRetry,
+    onDiscard,
+}: Props) {
     const scroller = useRef<HTMLDivElement>(null);
     const [nearBottom, setNearBottom] = useState(true);
     const snapshot = useRef<Snapshot | null>(null);
 
     // Shown oldest first. Copy before reversing: reverse() changes the array it is called on.
     const ordered = [...messages].reverse();
+
+    // A pending message disappears the moment its saved copy is in the list.
+    const visiblePending = outgoing.filter(
+        (item) =>
+            !messages.some(
+                (message) => message.client_uuid === item.client_uuid,
+            ),
+    );
+    const pendingCount = visiblePending.length;
 
     // Open every chat at its newest message, before the browser paints.
     useLayoutEffect(() => {
@@ -72,10 +92,10 @@ export function ChatPanel({ chat, messages }: Props) {
     useLayoutEffect(() => {
         const element = scroller.current;
 
-        if (newestIsMine && element) {
+        if (element && (newestIsMine || pendingCount > 0)) {
             element.scrollTop = element.scrollHeight;
         }
-    }, [newestId, newestIsMine]);
+    }, [newestId, newestIsMine, pendingCount]);
 
     // Older messages were added above the view: keep the reader where they were.
     useLayoutEffect(() => {
@@ -147,11 +167,13 @@ export function ChatPanel({ chat, messages }: Props) {
                     }}
                     className="flex-1 overflow-y-auto p-4"
                 >
-                    {ordered.length === 0 ? (
+                    {ordered.length === 0 && pendingCount === 0 && (
                         <p className="text-center text-sm text-muted-foreground">
                             No messages yet
                         </p>
-                    ) : (
+                    )}
+
+                    {ordered.length > 0 && (
                         <InfiniteScroll
                             data="messages"
                             reverse
@@ -191,6 +213,15 @@ export function ChatPanel({ chat, messages }: Props) {
                             })}
                         </InfiniteScroll>
                     )}
+
+                    {visiblePending.map((item) => (
+                        <OutgoingBubble
+                            key={item.client_uuid}
+                            item={item}
+                            onRetry={onRetry}
+                            onDiscard={onDiscard}
+                        />
+                    ))}
                 </div>
 
                 {!nearBottom && (
@@ -208,7 +239,8 @@ export function ChatPanel({ chat, messages }: Props) {
             </div>
 
             {chat.can_send ? (
-                <MessageComposer chatId={chat.id} />
+                // The key gives every chat a fresh, empty box.
+                <MessageComposer key={chat.id} onSend={onSend} />
             ) : (
                 <p className="border-t px-4 py-3 text-center text-sm text-muted-foreground">
                     You left this group, so you can no longer send messages.

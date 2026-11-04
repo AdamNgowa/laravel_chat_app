@@ -44,18 +44,22 @@ chat-app/
 │   │   ├── Controllers/
 │   │   │   ├── ChatController.php          # chat list, open chat and its first page of messages
 │   │   │   ├── Controller.php
+│   │   │   ├── MessageController.php       # saves a sent message (retry-safe); replies with JSON
 │   │   │   └── Settings/
 │   │   │       ├── ProfileController.php   # profile edit, update, delete account
 │   │   │       └── SecurityController.php  # security page, password update
 │   │   ├── Middleware/
 │   │   │   ├── HandleAppearance.php        # light/dark preference
 │   │   │   └── HandleInertiaRequests.php   # shared props sent to every page
-│   │   └── Requests/
-│   │       └── Settings/
-│   │           ├── PasswordUpdateRequest.php
-│   │           ├── ProfileDeleteRequest.php
-│   │           ├── ProfileUpdateRequest.php
-│   │           └── TwoFactorAuthenticationRequest.php
+│   │   ├── Requests/
+│   │   │   ├── StoreMessageRequest.php     # who may send (policy), and the rules for a message
+│   │   │   └── Settings/
+│   │   │       ├── PasswordUpdateRequest.php
+│   │   │       ├── ProfileDeleteRequest.php
+│   │   │       ├── ProfileUpdateRequest.php
+│   │   │       └── TwoFactorAuthenticationRequest.php
+│   │   └── Resources/
+│   │       └── MessageResource.php         # the one JSON shape of a message, for paging and sending
 │   ├── Models/
 │   │   ├── Conversation.php                # a direct or group chat
 │   │   ├── Message.php                     # one message; soft deletes
@@ -154,8 +158,11 @@ chat-app/
 │       │   ├── chat/                # pieces of the chat screen
 │       │   │   ├── chat-avatar.tsx  # initials, or a people icon for groups
 │       │   │   ├── chat-list.tsx    # left pane: header, user menu and chat rows
-│       │   │   ├── chat-panel.tsx   # the open chat: header, messages, read-only bar
-│       │   │   └── message-bubble.tsx
+│       │   │   ├── chat-panel.tsx   # the open chat: header, messages, composer or read-only bar
+│       │   │   ├── message-bubble.tsx
+│       │   │   ├── message-composer.tsx  # the text box and Send; hands text to the outbox
+│       │   │   ├── outgoing-bubble.tsx   # a pending or failed message (dimmed or red, Retry/Delete)
+│       │   │   └── outgoing-sender.tsx   # invisible; one per pending message; does the sending
 │       │   └── ui/                  # shadcn/ui building blocks (owned source files)
 │       │       ├── alert.tsx, avatar.tsx, badge.tsx, breadcrumb.tsx, button.tsx
 │       │       ├── card.tsx, checkbox.tsx, collapsible.tsx, dialog.tsx
@@ -171,6 +178,7 @@ chat-app/
 │       │   ├── use-initials.tsx
 │       │   ├── use-mobile-navigation.ts
 │       │   ├── use-mobile.tsx
+│       │   ├── use-outbox.ts         # the list of messages written but not yet confirmed
 │       │   └── use-two-factor-auth.ts
 │       ├── layouts/
 │       │   ├── app-layout.tsx
@@ -215,7 +223,7 @@ chat-app/
 │           └── vite-env.d.ts
 │
 ├── routes/
-│   ├── chats.php                    # chat routes: the list and one open chat
+│   ├── chats.php                    # chat routes: the list, one open chat, send a message
 │   ├── console.php
 │   ├── settings.php
 │   └── web.php                      # page routes; Fortify adds login, register and the rest

@@ -23,6 +23,7 @@ export type ChatMessage = {
     is_mine: boolean;
     created_at: string;
     edited_at: string | null;
+    client_uuid: string | null;
 };
 
 export type ActiveChat = {
@@ -47,4 +48,13 @@ export type SendMessageData = {
 //What the server answers
 export type SendMessageResponse = {
     message: ChatMessage;
+};
+
+// A message you have written that the server has not confirmed yet.
+export type OutgoingMessage = {
+    client_uuid: string;
+    chat_id: number;
+    body: string;
+    status: "sending" | "failed";
+    error: string | null;
 };
