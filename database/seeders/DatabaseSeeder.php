@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Actions\Chat\StartDirectChat;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Participant;
@@ -60,13 +61,11 @@ class DatabaseSeeder extends Seeder
 
     /**
      * A direct chat that started $days ago, with $count messages.
-     * Duplicates the "start a direct chat" rule that Phase 3 will own.
+     * Built by the same action the real "start a chat" feature uses.
      */
     private function direct(User $first, User $second, int $days, int $count): void
     {
-        $conversation = Conversation::factory()
-            ->direct($first, $second, now()->subDays($days))
-            ->create();
+        $conversation = app(StartDirectChat::class)->handle($first, $second, now()->subDays($days));
 
         $this->fill($conversation, $count);
     }

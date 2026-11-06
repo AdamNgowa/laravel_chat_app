@@ -1,5 +1,8 @@
 import { router, usePage } from "@inertiajs/react";
+import { SquarePen } from "lucide-react";
+import { useState } from "react";
 import { ChatAvatar } from "@/components/chat/chat-avatar";
+import { NewChatPanel } from "@/components/chat/new-chat-panel";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -8,10 +11,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserInfo } from "@/components/user-info";
 import { UserMenuContent } from "@/components/user-menu-content";
+import { formatListTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { show as showChat } from "@/routes/chats";
 import type { ChatSummary } from "@/types";
-import { formatListTime } from "@/lib/time";
 
 // The one line of text under a title.
 function previewText(chat: ChatSummary): string {
@@ -34,7 +37,11 @@ function previewText(chat: ChatSummary): string {
         : preview.body;
 }
 
-function ChatListHeader() {
+type HeaderProps = {
+    onNewChat: () => void;
+};
+
+function ChatListHeader({ onNewChat }: HeaderProps) {
     const { auth } = usePage().props;
 
     if (!auth.user) {
@@ -45,23 +52,36 @@ function ChatListHeader() {
         <header className="flex items-center justify-between border-b px-4 py-3">
             <h1 className="text-lg font-semibold">Chats</h1>
 
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        className="h-auto p-1.5"
-                        data-test="chat-user-menu"
-                    >
-                        <UserInfo user={auth.user} />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                    align="end"
-                    className="min-w-56 rounded-lg"
+            <div className="flex items-center gap-1">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={onNewChat}
+                    aria-label="New chat"
+                    data-test="new-chat"
                 >
-                    <UserMenuContent user={auth.user} />
-                </DropdownMenuContent>
-            </DropdownMenu>
+                    <SquarePen className="size-5" />
+                </Button>
+
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            className="h-auto p-1.5"
+                            data-test="chat-user-menu"
+                        >
+                            <UserInfo user={auth.user} />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                        align="end"
+                        className="min-w-56 rounded-lg"
+                    >
+                        <UserMenuContent user={auth.user} />
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
         </header>
     );
 }
@@ -72,6 +92,9 @@ type Props = {
 };
 
 export function ChatList({ chats, activeId }: Props) {
+    // True while the "find someone to message" panel replaces the list.
+    const [searching, setSearching] = useState(false);
+
     return (
         <aside
             className={cn(
@@ -79,9 +102,11 @@ export function ChatList({ chats, activeId }: Props) {
                 activeId === null ? "flex" : "hidden",
             )}
         >
-            <ChatListHeader />
+            <ChatListHeader onNewChat={() => setSearching(true)} />
 
-            {chats.length === 0 ? (
+            {searching ? (
+                <NewChatPanel onClose={() => setSearching(false)} />
+            ) : chats.length === 0 ? (
                 <p className="p-6 text-center text-sm text-muted-foreground">
                     No conversations yet.
                 </p>

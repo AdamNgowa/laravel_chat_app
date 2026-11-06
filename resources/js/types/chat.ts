@@ -58,3 +58,13 @@ export type OutgoingMessage = {
     status: "sending" | "failed";
     error: string | null;
 };
+
+// A person found by the "new chat" search: only what the list needs, never an email.
+export type SearchUser = {
+    id: number;
+    name: string;
+};
+
+export type SearchUsersResponse = {
+    users: SearchUser[];
+};

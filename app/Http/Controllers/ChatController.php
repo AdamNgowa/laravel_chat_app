@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Chat\StartDirectChat;
 use App\Enums\MessageType;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Participant;
 use App\Models\User;
 use App\Http\Resources\MessageResource;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -56,6 +60,24 @@ class ChatController extends Controller
             'activeChat' => fn () => $this->activeChat($viewer, $conversation),
             'messages' => Inertia::scroll(fn () => $this->messagePage($membership)),
         ]);
+    }
+
+    /**
+     * Start a chat with someone or open one you already have. Either way
+     * you land in it: the answer is a redirect to the
+     */
+    public function store(Request $request, StartDirectChat $startDirectChat): RedirectResponse
+    {
+        $me = $request->user();
+
+        $validated = $request->validate([
+            // Must be a real user and not yourself
+            'user_id' => ['required','integer','exists:users,id', Rule::notIn([$me->id])],
+        ]);
+
+        $conversation =  $startDirectChat->handle($me,User::findOrFail($validated['user_id']));
+
+        return redirect()->route('chats.show',$conversation);
     }
 
     /**
