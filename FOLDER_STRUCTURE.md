@@ -166,7 +166,8 @@ chat-app/
 │       │   │   ├── message-composer.tsx  # the text box and Send; hands text to the outbox
 │       │   │   ├── new-chat-panel.tsx    # find someone by name (debounced search) and start a chat
 │       │   │   ├── outgoing-bubble.tsx   # a pending or failed message (dimmed or red, Retry/Delete)
-│       │   │   └── outgoing-sender.tsx   # invisible; one per pending message; does the sending
+│       │   │   ├── outgoing-sender.tsx   # invisible; one per pending message; does the sending
+│       │   │   └── session-expired-banner.tsx  # "log in again" strip; the login link opens a new tab
 │       │   └── ui/                  # shadcn/ui building blocks (owned source files)
 │       │       ├── alert.tsx, avatar.tsx, badge.tsx, breadcrumb.tsx, button.tsx
 │       │       ├── card.tsx, checkbox.tsx, collapsible.tsx, dialog.tsx
@@ -199,6 +200,7 @@ chat-app/
 │       │   └── settings/
 │       │       └── layout.tsx
 │       ├── lib/
+│       │   ├── request-failure.ts   # an HTTP status turned into words and a "session expired" flag
 │       │   ├── time.ts              # UTC to the viewer's local time, list and day labels
 │       │   └── utils.ts
 │       ├── pages/                   # one file per screen, named by Laravel routes and Fortify views
