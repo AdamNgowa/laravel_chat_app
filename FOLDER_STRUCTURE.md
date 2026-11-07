@@ -31,6 +31,8 @@ chat-app/
 │
 ├── app/
 │   ├── Actions/
+│   │   ├── Chat/
+│   │   │   └── StartDirectChat.php     # the one recipe for a direct chat (ordered pair, members, race-safe)
 │   │   └── Fortify/
 │   │       ├── CreateNewUser.php           # registration logic and validation
 │   │       └── ResetUserPassword.php       # password reset logic
@@ -42,9 +44,10 @@ chat-app/
 │   │   └── MessageType.php                 # text | system
 │   ├── Http/
 │   │   ├── Controllers/
-│   │   │   ├── ChatController.php          # chat list, open chat and its first page of messages
+│   │   │   ├── ChatController.php          # chat list, open chat (first page of messages), start a chat
 │   │   │   ├── Controller.php
 │   │   │   ├── MessageController.php       # saves a sent message (retry-safe); replies with JSON
+│   │   │   ├── UserSearchController.php    # JSON: find people by name for "start a chat"
 │   │   │   └── Settings/
 │   │   │       ├── ProfileController.php   # profile edit, update, delete account
 │   │   │       └── SecurityController.php  # security page, password update
@@ -93,7 +96,7 @@ chat-app/
 ├── database/
 │   ├── .gitignore
 │   ├── factories/
-│   │   ├── ConversationFactory.php  # fake chats; direct() builds the ordered pair and members
+│   │   ├── ConversationFactory.php  # fake groups only; direct chats come from StartDirectChat
 │   │   ├── MessageFactory.php       # fake messages; system, sentAt and replyingTo states
 │   │   ├── ParticipantFactory.php   # fake memberships; joinedAt, leftAt and clearedAt states
 │   │   └── UserFactory.php          # fake users for tests
@@ -161,6 +164,7 @@ chat-app/
 │       │   │   ├── chat-panel.tsx   # the open chat: header, messages, composer or read-only bar
 │       │   │   ├── message-bubble.tsx
 │       │   │   ├── message-composer.tsx  # the text box and Send; hands text to the outbox
+│       │   │   ├── new-chat-panel.tsx    # find someone by name (debounced search) and start a chat
 │       │   │   ├── outgoing-bubble.tsx   # a pending or failed message (dimmed or red, Retry/Delete)
 │       │   │   └── outgoing-sender.tsx   # invisible; one per pending message; does the sending
 │       │   └── ui/                  # shadcn/ui building blocks (owned source files)
@@ -174,6 +178,7 @@ chat-app/
 │       │   ├── use-appearance.tsx
 │       │   ├── use-clipboard.ts
 │       │   ├── use-current-url.ts
+│       │   ├── use-debounced-value.ts  # a value that only updates after it stops changing
 │       │   ├── use-flash-toast.ts
 │       │   ├── use-initials.tsx
 │       │   ├── use-mobile-navigation.ts
@@ -223,7 +228,7 @@ chat-app/
 │           └── vite-env.d.ts
 │
 ├── routes/
-│   ├── chats.php                    # chat routes: the list, one open chat, send a message
+│   ├── chats.php                    # chat routes: list, open, start a chat, send a message, user search
 │   ├── console.php
 │   ├── settings.php
 │   └── web.php                      # page routes; Fortify adds login, register and the rest

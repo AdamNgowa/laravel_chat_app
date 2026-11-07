@@ -7,6 +7,18 @@ import type {
     SendMessageResponse,
 } from "@/types";
 
+function failureText(status: number): string {
+    switch (status) {
+        case 403:
+            return "You can no longer send messages to this chat";
+
+        case 429:
+            return "You are sending to much. wait a moment then press retry";
+        default:
+            return "Could'nt send";
+    }
+}
+
 type Props = {
     item: OutgoingMessage;
     // True only for the oldest unsent message of its chat, so messages reach the server in order.
@@ -66,12 +78,7 @@ export function OutgoingSender({
                 );
             },
             onHttpException: (response) => {
-                onFailed(
-                    item.client_uuid,
-                    response.status === 403
-                        ? "You can no longer send messages in this chat."
-                        : "Couldn't send.",
-                );
+                onFailed(item.client_uuid, failureText(response.status));
             },
             onNetworkError: () => {
                 onFailed(item.client_uuid, "Couldn't reach the server.");

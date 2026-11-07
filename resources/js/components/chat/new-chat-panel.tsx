@@ -11,6 +11,7 @@ import type { SearchUser, SearchUsersResponse } from "@/types";
 const MIN_QUERY_LENGTH = 2;
 const MAX_QUERY_LENGTH = 50;
 const SEARCH_DELAY_MS = 300;
+const SEARCH_FAILED = "Couldn't search. Keep typing to try again.";
 
 type Props = {
     onClose: () => void;
@@ -20,7 +21,7 @@ type Props = {
 export function NewChatPanel({ onClose }: Props) {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<SearchUser[] | null>(null);
-    const [searchFailed, setSearchFailed] = useState(false);
+    const [searchProblem, setSearchProblem] = useState<string | null>(null);
     const [startingId, setStartingId] = useState<number | null>(null);
     const [startFailed, setStartFailed] = useState(false);
 
@@ -37,7 +38,7 @@ export function NewChatPanel({ onClose }: Props) {
     useEffect(() => {
         // Anything still in flight was for an older word.
         cancel();
-        setSearchFailed(false);
+        setSearchProblem(null);
 
         if (debouncedTerm.length < MIN_QUERY_LENGTH) {
             setResults(null);
@@ -49,9 +50,14 @@ export function NewChatPanel({ onClose }: Props) {
 
         get(`${searchUsers.url()}?${params}`, {
             onSuccess: (response) => setResults(response.users),
-            onError: () => setSearchFailed(true),
-            onHttpException: () => setSearchFailed(true),
-            onNetworkError: () => setSearchFailed(true),
+            onError: () => setSearchProblem(SEARCH_FAILED),
+            onHttpException: (response) =>
+                setSearchProblem(
+                    response.status === 429
+                        ? "You're searching too fast. Wait a moment."
+                        : SEARCH_FAILED,
+                ),
+            onNetworkError: () => setSearchProblem(SEARCH_FAILED),
         }).catch(() => {
             // Every failure is handled by the callbacks above.
         });
@@ -83,8 +89,8 @@ export function NewChatPanel({ onClose }: Props) {
 
     if (term.length < MIN_QUERY_LENGTH) {
         message = `Type at least ${MIN_QUERY_LENGTH} letters of a name.`;
-    } else if (searchFailed) {
-        message = "Couldn't search. Keep typing to try again.";
+    } else if (searchProblem !== null) {
+        message = searchProblem;
     } else if (results === null) {
         message = "Searching…";
     } else if (results.length === 0) {
