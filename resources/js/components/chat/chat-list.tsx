@@ -89,9 +89,10 @@ function ChatListHeader({ onNewChat }: HeaderProps) {
 type Props = {
     chats: ChatSummary[];
     activeId: number | null;
+    onSessionExpired: () => void;
 };
 
-export function ChatList({ chats, activeId }: Props) {
+export function ChatList({ chats, activeId, onSessionExpired }: Props) {
     // True while the "find someone to message" panel replaces the list.
     const [searching, setSearching] = useState(false);
 
@@ -105,7 +106,10 @@ export function ChatList({ chats, activeId }: Props) {
             <ChatListHeader onNewChat={() => setSearching(true)} />
 
             {searching ? (
-                <NewChatPanel onClose={() => setSearching(false)} />
+                <NewChatPanel
+                    onClose={() => setSearching(false)}
+                    onSessionExpired={onSessionExpired}
+                />
             ) : chats.length === 0 ? (
                 <p className="p-6 text-center text-sm text-muted-foreground">
                     No conversations yet.

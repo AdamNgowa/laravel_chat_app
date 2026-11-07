@@ -1,7 +1,9 @@
 import { Head } from "@inertiajs/react";
+import { useState } from "react";
 import { ChatList } from "@/components/chat/chat-list";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { OutgoingSender } from "@/components/chat/outgoing-sender";
+import { SessionExpiredBanner } from "@/components/chat/session-expired-banner";
 import { useOutbox } from "@/hooks/use-outbox";
 import { cn } from "@/lib/utils";
 import type { ActiveChat, ChatSummary, MessagePage } from "@/types";
@@ -17,6 +19,9 @@ export default function ChatsIndex({ chats, activeChat, messages }: Props) {
     // the panel closes (phone: back to the list) or the person opens another chat.
     const outbox = useOutbox();
 
+    // Set when any request finds this tab signed out; cleared by a successful send.
+    const [sessionExpired, setSessionExpired] = useState(false);
+
     // Only the oldest unsent message of each chat may send, so messages reach
     // the server in the order they were written. A failed one holds the rest back.
     const firstInChat = new Map<number, string>();
@@ -30,7 +35,18 @@ export default function ChatsIndex({ chats, activeChat, messages }: Props) {
     return (
         <>
             <Head title={activeChat?.title ?? "Chats"} />
-            <ChatList chats={chats} activeId={activeChat?.id ?? null} />
+
+            {sessionExpired && (
+                <SessionExpiredBanner
+                    onDismiss={() => setSessionExpired(false)}
+                />
+            )}
+
+            <ChatList
+                chats={chats}
+                activeId={activeChat?.id ?? null}
+                onSessionExpired={() => setSessionExpired(true)}
+            />
             <section
                 className={cn(
                     "min-w-0 flex-1 flex-col",
@@ -65,8 +81,13 @@ export default function ChatsIndex({ chats, activeChat, messages }: Props) {
                         firstInChat.get(item.chat_id) === item.client_uuid
                     }
                     activeChatId={activeChat?.id ?? null}
-                    onSent={outbox.remove}
+                    onSent={(uuid) => {
+                        outbox.remove(uuid);
+                        // A send that works proves the session is back.
+                        setSessionExpired(false);
+                    }}
                     onFailed={outbox.markFailed}
+                    onSessionExpired={() => setSessionExpired(true)}
                 />
             ))}
         </>

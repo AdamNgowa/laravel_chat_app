@@ -1,23 +1,12 @@
 import { router, useHttp } from "@inertiajs/react";
 import { useEffect, useRef } from "react";
+import { describeFailure } from "@/lib/request-failure";
 import { send as sendMessage } from "@/routes/chats";
 import type {
     OutgoingMessage,
     SendMessageData,
     SendMessageResponse,
 } from "@/types";
-
-function failureText(status: number): string {
-    switch (status) {
-        case 403:
-            return "You can no longer send messages to this chat";
-
-        case 429:
-            return "You are sending to much. wait a moment then press retry";
-        default:
-            return "Could'nt send";
-    }
-}
 
 type Props = {
     item: OutgoingMessage;
@@ -27,6 +16,7 @@ type Props = {
     activeChatId: number | null;
     onSent: (uuid: string) => void;
     onFailed: (uuid: string, error: string) => void;
+    onSessionExpired: () => void;
 };
 
 /**
@@ -40,6 +30,7 @@ export function OutgoingSender({
     activeChatId,
     onSent,
     onFailed,
+    onSessionExpired,
 }: Props) {
     const { post } = useHttp<SendMessageData, SendMessageResponse>({
         body: item.body,
@@ -78,7 +69,13 @@ export function OutgoingSender({
                 );
             },
             onHttpException: (response) => {
-                onFailed(item.client_uuid, failureText(response.status));
+                const failure = describeFailure(response.status);
+
+                if (failure.sessionExpired) {
+                    onSessionExpired();
+                }
+
+                onFailed(item.client_uuid, failure.text);
             },
             onNetworkError: () => {
                 onFailed(item.client_uuid, "Couldn't reach the server.");

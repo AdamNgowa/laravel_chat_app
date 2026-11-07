@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { describeFailure } from "@/lib/request-failure";
 import { store as startChat } from "@/routes/chats";
 import { search as searchUsers } from "@/routes/users";
 import type { SearchUser, SearchUsersResponse } from "@/types";
@@ -15,10 +16,11 @@ const SEARCH_FAILED = "Couldn't search. Keep typing to try again.";
 
 type Props = {
     onClose: () => void;
+    onSessionExpired: () => void;
 };
 
 // Replaces the chat list while you look for someone to message.
-export function NewChatPanel({ onClose }: Props) {
+export function NewChatPanel({ onClose, onSessionExpired }: Props) {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<SearchUser[] | null>(null);
     const [searchProblem, setSearchProblem] = useState<string | null>(null);
@@ -51,12 +53,15 @@ export function NewChatPanel({ onClose }: Props) {
         get(`${searchUsers.url()}?${params}`, {
             onSuccess: (response) => setResults(response.users),
             onError: () => setSearchProblem(SEARCH_FAILED),
-            onHttpException: (response) =>
-                setSearchProblem(
-                    response.status === 429
-                        ? "You're searching too fast. Wait a moment."
-                        : SEARCH_FAILED,
-                ),
+            onHttpException: (response) => {
+                const failure = describeFailure(response.status);
+
+                if (failure.sessionExpired) {
+                    onSessionExpired();
+                }
+
+                setSearchProblem(failure.text);
+            },
             onNetworkError: () => setSearchProblem(SEARCH_FAILED),
         }).catch(() => {
             // Every failure is handled by the callbacks above.
