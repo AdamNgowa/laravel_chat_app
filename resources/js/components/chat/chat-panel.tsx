@@ -43,6 +43,9 @@ type Props = {
     messages: readonly ChatMessage[];
     // This chat's messages that the server has not confirmed yet.
     outgoing: readonly OutgoingMessage[];
+    // What is typed in this chat's box, and how to change it.
+    draft: string;
+    onDraftChange: (text: string) => void;
     onSend: (body: string) => void;
     onRetry: (uuid: string) => void;
     onDiscard: (uuid: string) => void;
@@ -52,6 +55,8 @@ export function ChatPanel({
     chat,
     messages,
     outgoing,
+    draft,
+    onDraftChange,
     onSend,
     onRetry,
     onDiscard,
@@ -239,8 +244,11 @@ export function ChatPanel({
             </div>
 
             {chat.can_send ? (
-                // The key gives every chat a fresh, empty box.
-                <MessageComposer key={chat.id} onSend={onSend} />
+                <MessageComposer
+                    value={draft}
+                    onChange={onDraftChange}
+                    onSend={onSend}
+                />
             ) : (
                 <p className="border-t px-4 py-3 text-center text-sm text-muted-foreground">
                     You left this group, so you can no longer send messages.

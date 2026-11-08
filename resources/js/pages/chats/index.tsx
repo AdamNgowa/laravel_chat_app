@@ -7,6 +7,7 @@ import { OutgoingSender } from "@/components/chat/outgoing-sender";
 import { SessionExpiredBanner } from "@/components/chat/session-expired-banner";
 import { useDelayedFlag } from "@/hooks/use-delayed-flag";
 import { useOutbox } from "@/hooks/use-outbox";
+import { useDrafts } from "@/hooks/use-drafts";
 import { cn } from "@/lib/utils";
 import type { ActiveChat, ChatSummary, MessagePage } from "@/types";
 
@@ -23,6 +24,8 @@ export default function ChatsIndex({ chats, activeChat, messages }: Props) {
     // Lives here, not in ChatPanel, so a message still sending is not lost when
     // the panel closes (phone: back to the list) or the person opens another chat.
     const outbox = useOutbox();
+    // Each chat's half-written message, kept here so switching chats does not lose it.
+    const drafts = useDrafts();
 
     // Set when any request finds this tab signed out; cleared by a successful send.
     const [sessionExpired, setSessionExpired] = useState(false);
@@ -82,6 +85,10 @@ export default function ChatsIndex({ chats, activeChat, messages }: Props) {
                         outgoing={outbox.items.filter(
                             (item) => item.chat_id === activeChat.id,
                         )}
+                        draft={drafts.get(activeChat.id)}
+                        onDraftChange={(text) =>
+                            drafts.set(activeChat.id, text)
+                        }
                         onSend={(body) => outbox.enqueue(activeChat.id, body)}
                         onRetry={outbox.retry}
                         onDiscard={outbox.remove}

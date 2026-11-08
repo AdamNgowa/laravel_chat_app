@@ -1,5 +1,4 @@
 import { SendHorizontal } from "lucide-react";
-import { useState } from "react";
 import type { SyntheticEvent } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -7,32 +6,33 @@ import { Button } from "@/components/ui/button";
 const MAX_BODY_LENGTH = 5000;
 
 type Props = {
+    // The text in the box, and how to change it. The page owns it, so each chat keeps its own.
+    value: string;
+    onChange: (value: string) => void;
     onSend: (body: string) => void;
 };
 
-// The box at the bottom of a chat. It only collects text; sending is done by the outbox.
-export function MessageComposer({ onSend }: Props) {
-    const [body, setBody] = useState("");
-
+// The box at the bottom of a chat. It only shows text and reports changes; sending is done by the outbox.
+export function MessageComposer({ value, onChange, onSend }: Props) {
     function submit(event: SyntheticEvent<HTMLFormElement>) {
         event.preventDefault();
 
-        const text = body.trim();
+        const text = value.trim();
 
         if (text === "") {
             return;
         }
 
         onSend(text);
-        setBody("");
+        onChange("");
     }
 
     return (
         <form onSubmit={submit} className="border-t p-3">
             <div className="flex items-end gap-2">
                 <textarea
-                    value={body}
-                    onChange={(event) => setBody(event.target.value)}
+                    value={value}
+                    onChange={(event) => onChange(event.target.value)}
                     onKeyDown={(event) => {
                         if (
                             event.key === "Enter" &&
@@ -52,7 +52,7 @@ export function MessageComposer({ onSend }: Props) {
                 <Button
                     type="submit"
                     size="icon"
-                    disabled={body.trim() === ""}
+                    disabled={value.trim() === ""}
                     aria-label="Send message"
                 >
                     <SendHorizontal className="size-4" />
