@@ -161,6 +161,7 @@ chat-app/
 │       │   ├── chat/                # pieces of the chat screen
 │       │   │   ├── chat-avatar.tsx  # initials, or a people icon for groups
 │       │   │   ├── chat-list.tsx    # left pane: header, user menu and chat rows
+│       │   │   ├── chat-panel-skeleton.tsx  # grey placeholder shown while the next chat loads
 │       │   │   ├── chat-panel.tsx   # the open chat: header, messages, composer or read-only bar
 │       │   │   ├── message-bubble.tsx
 │       │   │   ├── message-composer.tsx  # the text box and Send; hands text to the outbox
@@ -180,6 +181,7 @@ chat-app/
 │       │   ├── use-clipboard.ts
 │       │   ├── use-current-url.ts
 │       │   ├── use-debounced-value.ts  # a value that only updates after it stops changing
+│       │   ├── use-delayed-flag.ts     # true only once a flag has stayed on for a moment (no skeleton flash)
 │       │   ├── use-flash-toast.ts
 │       │   ├── use-initials.tsx
 │       │   ├── use-mobile-navigation.ts
@@ -205,6 +207,7 @@ chat-app/
 │       │   └── utils.ts
 │       ├── pages/                   # one file per screen, named by Laravel routes and Fortify views
 │       │   ├── dashboard.tsx
+│       │   ├── error.tsx            # friendly 403/404/500/503 page (only when debug is off)
 │       │   ├── welcome.tsx
 │       │   ├── auth/
 │       │   │   ├── confirm-password.tsx

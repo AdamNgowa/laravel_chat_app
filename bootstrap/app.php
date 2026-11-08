@@ -42,12 +42,24 @@ return Application::configure(basePath: dirname(__DIR__))
             return null;
         });
 
-        // A page visit (not a JSON call) whose token expired answers 419, which
-        // Inertia would show as a raw error page in a modal. Send the person back
-        // instead, with a toast. JSON calls keep their honest 419 so the chat
-        // can show its own banner.
+                // JSON calls keep their real status and body: the chat shows its own messages.
+        // Page visits get a friendly page for common errors, and a redirect instead
+        // of Inertia's raw error modal when a token expired (419).
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
-            if ($response->getStatusCode() === 419 && ! $request->expectsJson()) {
+            if ($request->expectsJson()) {
+                return $response;
+            }
+
+            $status = $response->getStatusCode();
+
+            // Only with debug off, so Laravel's detailed error page is still there while developing.
+            if (! config('app.debug') && in_array($status, [403, 404, 500, 503], true)) {
+                return Inertia::render('error', ['status' => $status])
+                    ->toResponse($request)
+                    ->setStatusCode($status);
+            }
+
+            if ($status === 419) {
                 Inertia::flash('toast', [
                     'type' => 'error',
                     'message' => 'Your session expired. Please try again.',

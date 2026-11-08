@@ -89,10 +89,17 @@ function ChatListHeader({ onNewChat }: HeaderProps) {
 type Props = {
     chats: ChatSummary[];
     activeId: number | null;
+    // Called with the chat's id when a click starts opening it, and with null when that finishes.
+    onOpening: (id: number | null) => void;
     onSessionExpired: () => void;
 };
 
-export function ChatList({ chats, activeId, onSessionExpired }: Props) {
+export function ChatList({
+    chats,
+    activeId,
+    onSessionExpired,
+    onOpening,
+}: Props) {
     // True while the "find someone to message" panel replaces the list.
     const [searching, setSearching] = useState(false);
 
@@ -111,9 +118,14 @@ export function ChatList({ chats, activeId, onSessionExpired }: Props) {
                     onSessionExpired={onSessionExpired}
                 />
             ) : chats.length === 0 ? (
-                <p className="p-6 text-center text-sm text-muted-foreground">
-                    No conversations yet.
-                </p>
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+                    <p className="text-sm text-muted-foreground">
+                        No conversations yet.
+                    </p>
+                    <Button type="button" onClick={() => setSearching(true)}>
+                        Start a chat
+                    </Button>
+                </div>
             ) : (
                 <ul className="flex-1 overflow-y-auto">
                     {chats.map((chat) => (
@@ -137,6 +149,8 @@ export function ChatList({ chats, activeId, onSessionExpired }: Props) {
                                         only: ["activeChat", "messages"],
                                         reset: ["messages"],
                                         preserveState: true,
+                                        onStart: () => onOpening(chat.id),
+                                        onFinish: () => onOpening(null),
                                     });
                                 }}
                                 aria-current={

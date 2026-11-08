@@ -2,11 +2,16 @@ import { Head } from "@inertiajs/react";
 import { useState } from "react";
 import { ChatList } from "@/components/chat/chat-list";
 import { ChatPanel } from "@/components/chat/chat-panel";
+import { ChatPanelSkeleton } from "@/components/chat/chat-panel-skeleton";
 import { OutgoingSender } from "@/components/chat/outgoing-sender";
 import { SessionExpiredBanner } from "@/components/chat/session-expired-banner";
+import { useDelayedFlag } from "@/hooks/use-delayed-flag";
 import { useOutbox } from "@/hooks/use-outbox";
 import { cn } from "@/lib/utils";
 import type { ActiveChat, ChatSummary, MessagePage } from "@/types";
+
+// A chat that opens faster than this never shows a skeleton.
+const SKELETON_DELAY_MS = 150;
 
 type Props = {
     chats: ChatSummary[];
@@ -21,6 +26,12 @@ export default function ChatsIndex({ chats, activeChat, messages }: Props) {
 
     // Set when any request finds this tab signed out; cleared by a successful send.
     const [sessionExpired, setSessionExpired] = useState(false);
+
+    // The chat a click is still loading, if any. After a short delay the right
+    // pane shows a skeleton instead of the previous chat.
+    const [openingId, setOpeningId] = useState<number | null>(null);
+    const opening = openingId !== null && openingId !== activeChat?.id;
+    const showSkeleton = useDelayedFlag(opening, SKELETON_DELAY_MS);
 
     // Only the oldest unsent message of each chat may send, so messages reach
     // the server in the order they were written. A failed one holds the rest back.
@@ -44,16 +55,21 @@ export default function ChatsIndex({ chats, activeChat, messages }: Props) {
 
             <ChatList
                 chats={chats}
-                activeId={activeChat?.id ?? null}
+                activeId={showSkeleton ? openingId : (activeChat?.id ?? null)}
+                onOpening={setOpeningId}
                 onSessionExpired={() => setSessionExpired(true)}
             />
             <section
                 className={cn(
                     "min-w-0 flex-1 flex-col",
-                    activeChat === null ? "hidden md:flex" : "flex",
+                    activeChat === null && !showSkeleton
+                        ? "hidden md:flex"
+                        : "flex",
                 )}
             >
-                {activeChat === null || messages === null ? (
+                {showSkeleton ? (
+                    <ChatPanelSkeleton />
+                ) : activeChat === null || messages === null ? (
                     <div className="flex flex-1 items-center justify-center">
                         <p className="text-sm text-muted-foreground">
                             Select a chat to start messaging
