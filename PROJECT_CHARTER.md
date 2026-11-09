@@ -115,10 +115,11 @@ The development environment (PHP, Composer, Node, a MySQL-compatible database, G
 - Password reset (not yet checked)
 - Protected and guest-only routes (not yet checked)
 - Login rate limiting (review the starter kit's limiter)
+- Account abuse: check whether Fortify throttles registration; consider a CAPTCHA and disposable-email checks (chat routes already require a verified email)
 - Two-factor authentication: trace the flow
 - Passkeys: trace the flow
 - Google sign-in: OAuth from first principles, credentials (verified card-free first), Laravel Socialite, linking to an existing email account, accounts created both ways, local test
-- Frontend handling of expired sessions (401 / 419). Phase 3's central API layer needs a basic version of this
+- Frontend handling of expired sessions (401 / 419): the basic version was built in Phase 3.8.3 (`describeFailure`, a session-expired banner whose login link opens a new tab). What remains for this phase is reviewing it against the Fortify flow
 - Disabled submit buttons while a request is in flight
 - Security headers
 - Structured logging, and logging of authentication events (never tokens or passwords)
@@ -160,26 +161,42 @@ Note: the database may be wiped and rebuilt if deferred work (for example Google
 
 ## Phase 3 — Core Messaging (Without Real-Time)
 
-Planned:
+**Status: DONE** (updated 2026-11-09). Step-by-step record: `CURRENT_STATUS_PHASE_3.md`.
 
-- Send and fetch messages
-- Conversation list sorted by latest activity, with last-message preview
-- Adaptive timestamps ("10:42", "Yesterday", "Mon", "12/10/26") and date separators
-- Auto-scroll to newest message
-- "Scroll to bottom" button with new-message count
-- Infinite scroll / load older messages
-- Optimistic sending with retry on failure
-- Enter to send, Shift+Enter for a new line
-- Search users and start a chat (one shared place for the direct-chat rule, also used by the seeder)
-- Policy checks (`view`, `send`) on every conversation route, with a read-only bar for a leaver
-- Message listing only through `Participant::visibleMessages()`
-- Skeleton loaders, empty states, friendly error states
-- Responsive layout: two panes on desktop, list-then-chat on mobile
-- Plain JSON requests through Inertia v3's `useHttp` (decided in 3.5, instead of a hand-built `fetch` wrapper), with expired sessions (401/419) and errors handled in one place (tested in 3.8)
-- Rate limiting and spam protection on message sending
-- Disabled controls while requests are in flight
+### Done
+
+- Chat list sorted by latest activity with a per-viewer last-message preview, built from the viewer's participant rows
+- Open a chat at `/chats/{conversation}` with `view` and `send` policy checks on every conversation route and a read-only bar for a leaver; messages listed only through `Participant::visibleMessages()`
+- Adaptive timestamps and date separators, converted from UTC in the browser (`lib/time.ts`)
+- Auto-scroll to the newest message, and a "scroll to bottom" button
+- Load older messages by cursor pagination (Inertia's reverse `<InfiniteScroll>` with `Inertia::scroll()`)
+- Send a message through a retry-safe endpoint (`client_uuid`, unique per sender), with `MessageResource` as the one JSON shape
+- Plain JSON requests through Inertia v3's `useHttp` (instead of a hand-built `fetch` wrapper), with expired sessions (401 and 419) handled in one place (`describeFailure`, a session-expired banner whose login link opens a new tab)
+- Optimistic sending with an in-order outbox, a failed state, and Retry or Delete; Enter to send, Shift+Enter for a new line
+- Search users and start a chat: one shared place for the direct-chat rule (`StartDirectChat`, also used by the seeder), user search, `POST chats`; real users cannot chat with themselves
+- Skeleton loader (delayed so a fast open never flashes it), empty states, friendly error page for 403, 404, 500 and 503, uniform JSON 404 body
+- Responsive layout: two panes on desktop, list-then-chat on phone
+- Rate limiting per signed-in user on sending messages, searching and starting chats
+- Per-chat drafts
+- Disabled controls while requests are in flight: applied to Retry and to the chat-start list; the message box deliberately stays enabled, because optimistic sending is the point
+
+### Deferred by design
+
+- The new-message count on the scroll button (nothing can arrive live before Phase 4)
+- Keeping unsent messages and drafts across a page reload
+- Enter adding a new line on phones
+
+### Carried forward to later phases
+
+- Phase 4: live-channel authorization must exclude people who left; follow other people's messages only when the reader is near the bottom; build the scroll button's count
+- Phase 13: tests for the send endpoint, the outbox rules, `StartDirectChat`, user search, `POST chats`, session expiry and rate limits (listed under Phase 13)
+- Phase 14: the chat list's query cost, the user search `LIKE`, a general read limiter, the scroll-anchoring defect on long chats
+- Phase 16: HTTPS (the browser's `crypto.randomUUID()` needs it), a shared cache store for rate limits
+- Phase 1 leftovers: registration throttling, CAPTCHA and disposable-email checks
 
 ## Phase 4 — Real-Time
+
+**Status: NOT STARTED** (updated 2026-11-09)
 
 Planned:
 
@@ -192,6 +209,14 @@ Planned:
 - Typing indicators (multiple names in groups)
 - Online status and last seen (presence channels)
 - Reconnect banner and automatic reconnection
+
+### Carried in from earlier phases
+
+- Channel authorization uses `send`-style logic (a membership with `left_at` empty), not `view`; nobody receives a message outside their visibility window, over a live channel just as over HTTP
+- A live event for your own message must not add a duplicate: reconcile with the outbox by `id` or `client_uuid`
+- Live payloads use `MessageResource` (it needs the viewing user, because of `is_mine`)
+- Follow other people's new messages only when the reader is near the bottom; otherwise show a count on the scroll-to-bottom button
+- Check what `composer run dev` starts and whether a queue worker is needed for broadcasting; check the broadcast, queue and cache drivers in `.env`
 
 ## Phase 5 — Read / Unread & Receipts
 
@@ -260,6 +285,7 @@ Planned:
 - Upload hardening: content-based type checking, safe filenames, safe serving of uploaded files, upload rate limiting
 - Auto-cleanup of orphaned and old media
 - Storage abstraction: local disk first, external storage later
+- Reserve space for images before they load, so late-loading images do not shift the bottom of a chat
 
 ## Phase 9 — Chat Management & Search
 
@@ -306,6 +332,8 @@ Planned:
 - Delete account, with audit logging
 - Invite people by link or email, with rate limiting
 - Optional admin-approved signup, so strangers cannot register
+- Replace the " (You)" stripping in `ChatAvatar` with a server-sent `avatar_name`
+- Discovery privacy: user search finds anyone by name today (id and name only); decide who may find or message whom, and how blocking interacts
 
 ## Phase 12 — Polish & Accessibility
 
@@ -316,6 +344,12 @@ Planned:
 - Consistent empty, loading and error states
 - Accessible contrast, focus states and screen-reader labels
 - Responsive review on real phones
+- Enter adds a new line on phones (a send button exists); Enter sends on desktop
+- Optionally keep unsent messages and drafts across a page reload (browser storage)
+- Read the `Retry-After` seconds from a 429 and show them (first confirm the callback exposes headers)
+- Confirm the toast after the 419 redirect appears, or remove the flash lines
+- A non-validation failure of `router.post` (403, 500) shows Inertia's default error overlay: give it a friendlier path
+- Time labels ("Today", "Yesterday") are computed at render and go stale on a page left open past midnight
 
 ## Phase 13 — Testing & Quality
 
@@ -333,6 +367,12 @@ Planned:
 - End-to-end browser tests with Playwright
 - Coverage and regression review
 - Tests for every flow that deletes, cascades or depends on flush order
+- Send endpoint: 201 new, 200 repeat with the same id, 409 uuid reused across chats, 422 empty or over 5000 characters, 404 stranger, 403 leaver, and a stranger cannot tell 422 from 404
+- `StartDirectChat`: both orders find one chat, a self-chat has one participant, a unique-key race returns the winner
+- User search (escaping, 422 under 2 characters, the searcher excluded, no email in the response) and `POST chats` (own id and an unknown id both give 422)
+- Outbox rules where practical: a retry reuses the `client_uuid`, a failed message holds later ones in its chat, a reply for a chat that is no longer open does not touch the open chat
+- Session expiry (401 and 419) and rate limits (429)
+- Unit tests for `lib/time.ts` with a fixed `now`
 
 ## Phase 14 — Performance & Data Access
 
@@ -345,6 +385,10 @@ Planned:
 - Transaction policy review
 - Queues for notifications and media processing
 - Connection tuning for a hosted MySQL-compatible database
+- The chat list costs 4 queries plus 2 per chat, and `show` looks up the viewer's membership three times: move the window rule into a `Message` query scope
+- User search uses `LIKE '%term%'`, which cannot use an index
+- A general rate limiter for reads (opening chats and paging history are not throttled)
+- The scroll-anchoring defect on long chats: after the first older-page load, later loads at `scrollTop` 0 chain into each other
 
 ## Phase 15 — Docker & Developer Tooling
 
@@ -380,6 +424,9 @@ Planned:
 - Disable development-only routes in production (Inertia devtools, Boost browser logs)
 - Revisit sequential ids in URLs if random public ids are wanted
 - Free-tier realities: sleeping, wake-up delay, ephemeral disks
+- HTTPS is required, not just good practice: the browser's `crypto.randomUUID()` only works on secure pages
+- A shared cache store (Redis) for rate-limit counters when more than one server runs; the cache must never be the `array` driver
+- If Inertia SSR is kept, times would render in the server's zone: guard `lib/time.ts` or keep SSR off
 
 ## Deferred or Excluded
 

@@ -182,6 +182,7 @@ chat-app/
 │       │   ├── use-current-url.ts
 │       │   ├── use-debounced-value.ts  # a value that only updates after it stops changing
 │       │   ├── use-delayed-flag.ts     # true only once a flag has stayed on for a moment (no skeleton flash)
+│       │   ├── use-drafts.ts           # each chat's half-written message, kept while you switch chats
 │       │   ├── use-flash-toast.ts
 │       │   ├── use-initials.tsx
 │       │   ├── use-mobile-navigation.ts
